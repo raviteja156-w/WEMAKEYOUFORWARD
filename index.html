@@ -1,0 +1,441 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<!-- ============ HERO ============ -->
+<section class="max-w-7xl mx-auto px-5 md:px-8 pt-14 md:pt-20 pb-16 md:pb-24 relative overflow-hidden">
+  <div class="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 lg:gap-8 items-center">
+    <div>
+      <p class="inline-flex items-center gap-2 text-xs font-semibold text-mint bg-white/5 border border-white/10 px-3 py-1.5 rounded-full mb-6">
+        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+        Built for the Australian job market
+      </p>
+
+      {% if demo_role == 'guest' or not demo_role %}
+      <div id="hero-slideshow" class="min-h-[130px] md:min-h-[150px]">
+        <h1 id="hero-heading" class="slide-fade-enter font-display font-extrabold text-[2.6rem] leading-[1.05] md:text-6xl md:leading-[1.03] text-cream tracking-tight max-w-xl">
+          Find work that moves you forward.
+        </h1>
+        <p id="hero-subtext" class="slide-fade-enter mt-5 text-lg text-cream/60 max-w-md">
+          Better opportunities. Faster connections. NEXORA matches Australian job seekers with employers who are ready to hire.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 mt-5" id="hero-slide-dots"></div>
+      {% else %}
+      <h1 class="font-display font-extrabold text-[2.6rem] leading-[1.05] md:text-6xl md:leading-[1.03] text-cream tracking-tight max-w-xl">
+        Find work that moves you forward.
+      </h1>
+      <p class="mt-5 text-lg text-cream/60 max-w-md">
+        Better opportunities. Faster connections. NEXORA matches Australian job seekers with employers who are ready to hire.
+      </p>
+      {% endif %}
+
+      <form id="tour-hero-search" action="{{ url_for('jobs') }}" method="get" class="mt-8 bg-white border border-grey-line rounded-2xl p-2 flex flex-col sm:flex-row gap-2 shadow-2xl max-w-xl">
+        <div class="flex items-center gap-2.5 px-3 py-2.5 flex-1 min-w-0">
+          <i data-lucide="search" class="w-4 h-4 text-indigo shrink-0"></i>
+          <input name="q" type="text" placeholder="Job title, skill or company" class="w-full text-sm outline-none placeholder:text-grey">
+        </div>
+
+        <div class="hidden sm:block w-px bg-grey-line my-1"></div>
+
+        <div class="flex items-center gap-2.5 px-3 py-2.5 sm:w-44 shrink-0">
+          <i data-lucide="map-pin" class="w-4 h-4 shrink-0" style="color:#0E9D85"></i>
+          <input name="location" type="text" placeholder="Location" class="w-full text-sm outline-none placeholder:text-grey">
+        </div>
+
+        <button type="submit" class="btn btn-accent shrink-0">Search Jobs</button>
+      </form>
+
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a href="{{ url_for('jobs') }}" class="btn btn-primary">Find Jobs</a>
+        <a href="{{ url_for('pricing') }}" class="btn btn-outline on-dark">Post a Job</a>
+      </div>
+
+      <div class="mt-10 flex items-center gap-6 text-sm text-cream/50">
+        <div>
+          <span class="font-display font-bold text-mint text-lg" data-counter="2400" data-suffix="+">0</span>
+          live roles
+        </div>
+        <div>
+          <span class="font-display font-bold text-mint text-lg" data-counter="600" data-suffix="+">0</span>
+          employers
+        </div>
+        <div>
+          <span class="font-display font-bold text-mint text-lg" data-counter="8">0</span>
+          states &amp; territories
+        </div>
+      </div>
+    </div>
+
+    <!-- RESPONSIVE HERO IMAGE -->
+    <div class="hero-illustration-wrap">
+      <img
+        src="{{ url_for('static', filename='images/nexora-career-hero.png') }}"
+        alt="NEXORA career opportunities, job search and career growth illustration"
+        class="hero-illustration-image"
+        width="1536"
+        height="1024"
+        fetchpriority="high"
+      >
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY NEXORA ============ -->
+<section class="bg-white border-y border-grey-line">
+  <div class="max-w-7xl mx-auto px-5 md:px-8 pt-16 md:pt-20">
+    <div class="max-w-lg mb-12">
+      <h2 class="font-display text-3xl font-bold text-navy tracking-tight">
+        Why job seekers and employers choose NEXORA
+      </h2>
+      <p class="mt-3 text-ink/60">
+        A marketplace built around real connections, not endless scrolling.
+      </p>
+    </div>
+  </div>
+
+  <div class="nx-roll pb-16 md:pb-20">
+    <div class="nx-roll-track">
+      <!-- Original feature cards -->
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-indigo icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="git-branch" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Clearer connections</h3>
+        <p class="text-sm text-cream/60">See how your skills line up with a role before you apply, with plain match indicators — not a black box.</p>
+      </div>
+
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-mint icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="zap" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Faster hiring</h3>
+        <p class="text-sm text-cream/60">Employers move candidates through a visible pipeline, so nobody applies into the void.</p>
+      </div>
+
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-amber icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Trusted listings</h3>
+        <p class="text-sm text-cream/60">Every job is reviewed before it goes live, keeping the marketplace genuine on both sides.</p>
+      </div>
+
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-indigo icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="brain-circuit" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">AI-powered matching</h3>
+        <p class="text-sm text-cream/60">Smart recommendations surface roles that fit your skills, experience and goals.</p>
+      </div>
+
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-mint icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="file-text" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Smart profile builder</h3>
+        <p class="text-sm text-cream/60">Build a standout profile in minutes and let employers see what you bring.</p>
+      </div>
+
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-rose icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="bell-ring" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Instant job alerts</h3>
+        <p class="text-sm text-cream/60">Get notified the moment a role matching your preferences goes live.</p>
+      </div>
+
+      <div class="nx-roll-card">
+        <span class="icon-badge icon-badge-amber icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="line-chart" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Application tracking</h3>
+        <p class="text-sm text-cream/60">Follow every application from submitted to offer with a clear visual pipeline.</p>
+      </div>
+
+      <!-- Duplicate cards for seamless scrolling -->
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-indigo icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="git-branch" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Clearer connections</h3>
+        <p class="text-sm text-cream/60">See how your skills line up with a role before you apply, with plain match indicators — not a black box.</p>
+      </div>
+
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-mint icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="zap" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Faster hiring</h3>
+        <p class="text-sm text-cream/60">Employers move candidates through a visible pipeline, so nobody applies into the void.</p>
+      </div>
+
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-amber icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Trusted listings</h3>
+        <p class="text-sm text-cream/60">Every job is reviewed before it goes live, keeping the marketplace genuine on both sides.</p>
+      </div>
+
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-indigo icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="brain-circuit" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">AI-powered matching</h3>
+        <p class="text-sm text-cream/60">Smart recommendations surface roles that fit your skills, experience and goals.</p>
+      </div>
+
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-mint icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="file-text" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Smart profile builder</h3>
+        <p class="text-sm text-cream/60">Build a standout profile in minutes and let employers see what you bring.</p>
+      </div>
+
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-rose icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="bell-ring" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Instant job alerts</h3>
+        <p class="text-sm text-cream/60">Get notified the moment a role matching your preferences goes live.</p>
+      </div>
+
+      <div class="nx-roll-card" aria-hidden="true">
+        <span class="icon-badge icon-badge-amber icon-bounce-hover w-11 h-11 mb-4"><i data-lucide="line-chart" class="w-5 h-5"></i></span>
+        <h3 class="font-display font-semibold text-cream mb-1.5">Application tracking</h3>
+        <p class="text-sm text-cream/60">Follow every application from submitted to offer with a clear visual pipeline.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CATEGORIES ============ -->
+<section id="tour-categories" class="max-w-7xl mx-auto px-5 md:px-8 py-16 md:py-20">
+  <div class="flex items-end justify-between mb-8">
+    <h2 class="font-display text-3xl font-bold text-cream tracking-tight">Popular categories</h2>
+    <a href="{{ url_for('jobs') }}" class="text-sm font-semibold text-mint hover:text-white hidden sm:block">Browse all jobs</a>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+    {% for cat, count in categories.items() %}
+    <a href="{{ url_for('jobs') }}?industry={{ cat|urlencode }}" class="card card-hover p-4 flex flex-col gap-3">
+      <span class="text-xs font-semibold text-ink/40">{{ count }} roles</span>
+      <span class="font-display font-semibold text-navy leading-snug">{{ cat }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ============ FEATURED JOBS ============ -->
+<section id="tour-featured" class="bg-white border-y border-grey-line">
+  <div class="max-w-7xl mx-auto px-5 md:px-8 py-16 md:py-20">
+    <div class="flex items-end justify-between mb-8">
+      <h2 class="font-display text-3xl font-bold text-navy tracking-tight">Featured opportunities</h2>
+      <a href="{{ url_for('jobs') }}" class="text-sm font-semibold text-indigo hover:text-indigo-dark hidden sm:block">See all jobs</a>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {% for job in featured_jobs %}
+      <a href="{{ url_for('job_details', job_id=job.id) }}" class="card card-hover p-5 flex flex-col gap-3">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <span
+              class="company-badge w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0"
+              data-bg-color="{{ job.company_color }}"
+            >{{ job.company_initials }}</span>
+
+            <div>
+              <p class="font-display font-semibold text-navy leading-tight">{{ job.title }}</p>
+              <p class="text-xs text-ink/50">{{ job.company }}</p>
+            </div>
+          </div>
+
+          {% if job.featured %}
+          <span class="chip chip-indigo shrink-0">Featured</span>
+          {% endif %}
+        </div>
+
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink/50">
+          <span class="flex items-center gap-1">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+            {{ job.location }}
+          </span>
+          <span class="flex items-center gap-1">
+            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+            {{ job.type }}
+          </span>
+        </div>
+
+        <p class="text-sm font-semibold text-navy">{{ salary_label(job) }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3-STEP PROCESS ============ -->
+<section id="tour-steps" class="max-w-7xl mx-auto px-5 md:px-8 py-16 md:py-20">
+  <h2 class="font-display text-3xl font-bold text-cream tracking-tight mb-10 max-w-md">
+    Getting started takes three steps
+  </h2>
+
+  <div class="grid md:grid-cols-3 gap-8 relative">
+    <div class="hidden md:block absolute top-6 left-[16.5%] right-[16.5%] h-px bg-white/10"></div>
+
+    <div class="relative">
+      <div class="w-12 h-12 rounded-full font-display font-bold flex items-center justify-center mb-4 relative z-10 text-white icon-float" style="background:linear-gradient(135deg, var(--indigo), #8B7DFA)">
+        1
+      </div>
+      <h3 class="font-display font-semibold text-cream mb-1.5">Create your profile</h3>
+      <p class="text-sm text-cream/55">Add your skills and experience so employers understand what you bring.</p>
+    </div>
+
+    <div class="relative">
+      <div class="w-12 h-12 rounded-full font-display font-bold flex items-center justify-center mb-4 relative z-10 text-navy icon-float" style="background:linear-gradient(135deg, var(--mint), #17B79C); animation-delay:0.6s">
+        2
+      </div>
+      <h3 class="font-display font-semibold text-cream mb-1.5">Find your match</h3>
+      <p class="text-sm text-cream/55">Search and filter thousands of Australian roles, or let recommendations find you.</p>
+    </div>
+
+    <div class="relative">
+      <div class="w-12 h-12 rounded-full font-display font-bold flex items-center justify-center mb-4 relative z-10 text-white icon-float" style="background:linear-gradient(135deg, var(--rose), #FF9CB0); animation-delay:1.2s">
+        3
+      </div>
+      <h3 class="font-display font-semibold text-cream mb-1.5">Apply and track</h3>
+      <p class="text-sm text-cream/55">Submit your application and follow its progress through every stage.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EMPLOYER CTA ============ -->
+<section class="max-w-7xl mx-auto px-5 md:px-8 pb-16 md:pb-24">
+  <div id="tour-employer-cta" class="rounded-3xl p-8 md:p-14 grid md:grid-cols-[1.3fr_auto] gap-8 items-center overflow-hidden relative border border-white/10" style="background:linear-gradient(135deg, var(--indigo-dark) 0%, var(--navy-elevated) 65%)">
+    <span class="icon-badge icon-badge-mint icon-float w-14 h-14 absolute top-6 right-10 hidden md:flex" style="background:rgba(43,224,190,0.18)">
+      <i data-lucide="trending-up" class="w-6 h-6"></i>
+    </span>
+
+    <div>
+      <h2 class="font-display text-3xl md:text-4xl font-bold text-cream tracking-tight max-w-md">
+        Hiring? Get in front of Australia's job seekers.
+      </h2>
+      <p class="mt-3 text-cream/65 max-w-md">
+        Post a job in minutes and keep it live for 30 days. Plans start at AUD $19.
+      </p>
+    </div>
+
+    <div class="flex gap-3 shrink-0">
+      <a href="{{ url_for('pricing') }}" class="btn bg-cream text-navy hover:bg-white">View Pricing</a>
+      <a href="{{ url_for('post_job') }}" class="btn btn-accent">Post a Job</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+
+<!-- Homepage tour configuration -->
+<script>
+  window.NEXORA_TOUR_STEPS = [
+    {
+      selector: '#tour-hero-search',
+      title: 'Search anything',
+      text: 'Search by job title, skill or company, and narrow by location — right from the homepage.'
+    },
+    {
+      selector: '#tour-categories',
+      title: 'Browse by category',
+      text: 'Not sure what to search for? Explore roles by popular category across Australia.'
+    },
+    {
+      selector: '#tour-featured',
+      title: 'Featured opportunities',
+      text: 'Employers can choose to highlight their roles here — a good place to start looking.'
+    },
+    {
+      selector: '#tour-steps',
+      title: 'Three simple steps',
+      text: 'Create a profile, find your match, then apply and track progress — that is the whole journey.'
+    },
+    {
+      selector: '#tour-employer-cta',
+      title: 'Hiring? Post a job',
+      text: 'Employers can publish a role in minutes and reach job seekers right across Australia.'
+    }
+  ];
+
+  // Apply company badge colors without dynamic inline CSS in the template.
+  document.querySelectorAll('.company-badge[data-bg-color]').forEach(function (badge) {
+    badge.style.backgroundColor = badge.dataset.bgColor || '#6C5CF5';
+  });
+</script>
+
+{% if demo_role == 'guest' or not demo_role %}
+<!-- Guest homepage slideshow -->
+<script>
+(function () {
+  const slides = [
+    {
+      h: 'Find work that moves you forward.',
+      p: 'Better opportunities. Faster connections. NEXORA matches Australian job seekers with employers who are ready to hire.'
+    },
+    {
+      h: 'Discover roles built around your skills.',
+      p: 'See a plain-language match indicator before you apply — no guessing whether you are a fit.'
+    },
+    {
+      h: 'Hiring made human, not automated.',
+      p: 'Employers move real candidates through a visible pipeline, from application to offer.'
+    },
+    {
+      h: 'Australia’s opportunities, one platform.',
+      p: 'From Sydney to Darwin — full-time, part-time, casual, contract, remote and hybrid roles.'
+    }
+  ];
+
+  let currentIndex = 0;
+  let timer = null;
+
+  const heading = document.getElementById('hero-heading');
+  const subtext = document.getElementById('hero-subtext');
+  const dotsWrap = document.getElementById('hero-slide-dots');
+
+  if (!heading || !subtext || !dotsWrap) {
+    return;
+  }
+
+  function renderSlide() {
+    heading.classList.remove('slide-fade-enter');
+    subtext.classList.remove('slide-fade-enter');
+
+    // Restart the CSS animation.
+    void heading.offsetWidth;
+
+    heading.textContent = slides[currentIndex].h;
+    subtext.textContent = slides[currentIndex].p;
+
+    heading.classList.add('slide-fade-enter');
+    subtext.classList.add('slide-fade-enter');
+
+    dotsWrap.querySelectorAll('.slide-dot').forEach(function (dot, index) {
+      dot.classList.toggle('active', index === currentIndex);
+      dot.setAttribute('aria-pressed', String(index === currentIndex));
+    });
+  }
+
+  function resetTimer() {
+    if (timer !== null) {
+      clearInterval(timer);
+    }
+
+    timer = setInterval(function () {
+      currentIndex = (currentIndex + 1) % slides.length;
+      renderSlide();
+    }, 4200);
+  }
+
+  function goToSlide(index) {
+    currentIndex = index;
+    renderSlide();
+    resetTimer();
+  }
+
+  slides.forEach(function (_, index) {
+    const dot = document.createElement('button');
+
+    dot.type = 'button';
+    dot.className = 'slide-dot' + (index === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Show slide ' + (index + 1));
+    dot.setAttribute('aria-pressed', String(index === 0));
+
+    dot.addEventListener('click', function () {
+      goToSlide(index);
+    });
+
+    dotsWrap.appendChild(dot);
+  });
+
+  resetTimer();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

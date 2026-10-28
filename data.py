@@ -65,8 +65,6 @@ _JOB_SEED = [
     ("HR Business Partner", "Finance", ["Employee Relations", "Recruitment", "Policy"], 100000, 122000),
     ("Graphic Designer", "Design", ["Adobe Suite", "Branding", "Typography"], 68000, 82000),
     ("Civil Engineer", "Construction", ["AutoCAD", "Structural Design", "Compliance"], 95000, 118000),
-    ("Software Developer", "Technology", ["Python", "JavaScript", "SQL"], 95000, 120000),
-    ("Python Developer", "Technology", ["Python", "Django", "REST APIs"], 100000, 125000),
 ]
 
 FIRST_NAMES = ["Ava", "Liam", "Chloe", "Noah", "Mia", "Ethan", "Isla", "Jack",
@@ -168,54 +166,33 @@ def _build_candidates():
 
 CANDIDATES = _build_candidates()
 
-# --- Job seeker data ---------------------------------------------------------
-# Accounts, profiles, resumes, applications and saved jobs live in SQLite (see seeker_store.py).
+# --- Job seeker mock profile & state ------------------------------------
+SEEKER = {
+    "name": "Jordan Reyes",
+    "title": "Frontend Developer",
+    "location": "Melbourne, VIC",
+    "profile_completion": 85,
+    "resume_filename": "Jordan_Reyes_Resume.pdf",
+    "skills": ["JavaScript", "React", "CSS", "Figma"],
+}
 
+SEEKER_SAVED_JOB_IDS = set([JOBS[2]["id"], JOBS[7]["id"], JOBS[13]["id"]])
 
-def add_applicant(seeker_id, application_id, name, headline, skills, job):
-    """Mirror a seeker's application onto the employer's applicant board (stage: New)."""
-    CANDIDATES.append({
-        "id": next_id(),
-        "job_id": job["id"],
-        "job_title": job["title"],
-        "name": name,
-        "title": headline or job["title"],
-        "experience": job["experience"],
-        "skills": skills[:6],
-        "applied_date": date.today().isoformat(),
-        "stage": "New",
-        "avatar_initials": "".join(p[0] for p in name.split()[:2]).upper() or "?",
-        "seeker_id": seeker_id,
-        "application_id": application_id,
-    })
+SEEKER_APPLICATIONS = [
+    {"job_id": JOBS[2]["id"], "stage": "Reviewing", "applied_date": (date.today() - timedelta(days=6)).isoformat()},
+    {"job_id": JOBS[15]["id"], "stage": "Interview", "applied_date": (date.today() - timedelta(days=11)).isoformat()},
+    {"job_id": JOBS[7]["id"], "stage": "Applied", "applied_date": (date.today() - timedelta(days=2)).isoformat()},
+]
 
+APPLICATION_STAGES = ["Applied", "Reviewing", "Interview", "Offer"]
 
-def remove_applicant(seeker_id, application_id):
-    CANDIDATES[:] = [c for c in CANDIDATES
-                     if not (c.get("seeker_id") == seeker_id and c.get("application_id") == application_id)]
-
-
-# --- Employer ownership -----------------------------------------------------
-# Employer accounts live in Supabase (see db.py). Jobs are still held in memory,
-# so each job carries an `employer_id` pointing at the owning account.
-# The seeded Northlane Digital jobs belong to the demo employer account.
-DEMO_OWNER = "demo"
-for _job in JOBS:
-    if _job["company"] == "Northlane Digital":
-        _job["employer_id"] = DEMO_OWNER
-
-
-def jobs_for_employer(employer):
-    owners = {employer["id"]}
-    if employer["is_demo"]:
-        owners.add(DEMO_OWNER)
-    return [j for j in JOBS if j.get("employer_id") in owners]
-
-
-def candidates_for_employer(employer):
-    job_ids = {j["id"] for j in jobs_for_employer(employer)}
-    return [c for c in CANDIDATES if c["job_id"] in job_ids]
-
+# --- Employer mock account ------------------------------------------------
+EMPLOYER = {
+    "company": "Northlane Digital",
+    "initials": "ND",
+    "color": "#5D4FE0",
+    "jobs_posted_ids": [j["id"] for j in JOBS if j["company"] == "Northlane Digital"],
+}
 
 PACKAGES = [
     {"id": "basic", "name": "Basic", "price": 19, "tagline": "Get listed and discovered.",
@@ -228,8 +205,8 @@ PACKAGES = [
      "features": ["Homepage placement", "Featured + Urgent badges", "30 days live", "Dedicated support"]},
 ]
 
-# --- Draft job used by the Post a Job wizard, keyed by employer id ------
-DRAFT_JOBS = {}
+# --- Draft job used by the Post a Job wizard (single demo draft) --------
+DRAFT_JOB = {}
 
 # --- Admin mock platform data ---------------------------------------------
 PLATFORM_STATS = {

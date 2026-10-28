@@ -9,14 +9,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.3
-      - key: SECRET_KEY            # signs session cookies + reset links
-        generateValue: true
-      - key: SESSION_COOKIE_SECURE # cookies only over https
-        value: "1"
-      # --- Optional ---------------------------------------------------------
-      # Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your hosting provider dashboard.
-      # SUPABASE_ANON_KEY is optional for this server-side data layer.
-      # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET   enable "Continue with Google" (employer + seeker callbacks)
-      # NEXORA_DEMO_UPGRADE=0   turn off the demo Premium upgrade button
-      # SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, MAIL_FROM   send password-reset emails
-      # NEXORA_SEED_DEMO=1 + DEMO_EMPLOYER_PASSWORD   auto-create the Northlane demo employer

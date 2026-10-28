@@ -1,43 +1,10 @@
-import os
-import secrets
 from datetime import date, timedelta
-
-from dotenv import load_dotenv
-load_dotenv()
-
 from flask import Flask, render_template, session, jsonify, request
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 import data
-import db
-import employer_auth
-import seeker_auth
-import seeker_portal
-import seeker_store as store
-from employer_auth import current_company, current_employer, employer_required
-from seeker_auth import current_seeker, seeker_required
 
 app = Flask(__name__)
-
-# --- Security / session config -------------------------------------------------
-# Set SECRET_KEY in the environment for production. Without it a random key is used,
-# which is fine locally but signs everyone out whenever the server restarts.
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
-app.config.update(
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE="Lax",
-    # Set SESSION_COOKIE_SECURE=1 on any https deployment (render.yaml does this).
-    SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE") == "1",
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-    MAX_CONTENT_LENGTH=1024 * 1024,
-)
-# Trust one proxy hop (Render, Heroku, nginx) so https URLs and client IPs are correct.
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-
-db.init_app(app)
-app.register_blueprint(employer_auth.bp)
-app.register_blueprint(seeker_auth.bp)
-app.register_blueprint(seeker_portal.api_bp)
+app.secret_key = "nexora-demo-secret-key"
 
 
 def current_role():
@@ -46,43 +13,10 @@ def current_role():
 
 @app.context_processor
 def inject_globals():
-    employer = current_employer()
-    seeker_row = None if employer else current_seeker()
-    if employer:
-        role = "employer"          # a real login always wins over the demo switcher
-    elif seeker_row:
-        role = "seeker"
-    else:
-        role = current_role()
-        if role in ("employer", "seeker"):
-            role = "guest"         # these views can no longer be faked
     return {
-        "demo_role": role,
-        "employer_user": employer,
-        "employer_company": current_company(),
-        "seeker_user": store.seeker_display(seeker_row) if seeker_row else None,
-        "csrf_token": employer_auth.csrf_token,
-        "saved_count": len(store.saved_job_ids(seeker_row["id"])) if seeker_row else 0,
+        "demo_role": current_role(),
+        "saved_count": len(data.SEEKER_SAVED_JOB_IDS),
     }
-
-
-@app.template_filter("posted_label")
-def posted_label(days):
-    if days <= 0:
-        return "Today"
-    if days < 30:
-        return f"{days}d ago"
-    return f"{days // 30}mo ago"
-
-
-@app.after_request
-def security_headers(resp):
-    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
-    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    if request.path.startswith(("/employer", "/dashboard/employer")):
-        resp.headers["Cache-Control"] = "no-store"  # don't cache account pages (back button after logout)
-    return resp
 
 
 # ---------------------------------------------------------------- pages --
@@ -103,8 +37,7 @@ def jobs():
     return render_template(
         "jobs.html",
         jobs_json=live_jobs,
-        saved_ids=store.saved_job_ids(current_seeker()["id"]) if current_seeker() else [],
-        applied_ids=list(store.applied_job_ids(current_seeker()["id"])) if current_seeker() else [],
+        saved_ids=list(data.SEEKER_SAVED_JOB_IDS),
         locations=data.LOCATIONS,
         industries=data.INDUSTRIES,
         job_types=data.JOB_TYPES,
@@ -153,55 +86,46 @@ def job_details(job_id):
     job = data.get_job(job_id)
     if not job:
         return render_template("404.html"), 404
-    me = current_seeker()
-    is_saved = has_applied = False
-    percent, resume_info = 0, None
-    if me:
-        is_saved = job_id in store.saved_job_ids(me["id"])
-        has_applied = job_id in store.applied_job_ids(me["id"])
-        profile = store.get_profile(me["id"])
-        percent = store.profile_completion(me, profile)[0]
-        resume_info = store.get_resume(me["id"])
-        if resume_info:
-            resume_info["updated_label"] = store.format_date(resume_info["updated_at"])
+    is_saved = job_id in data.SEEKER_SAVED_JOB_IDS
+    has_applied = any(a["job_id"] == job_id for a in data.SEEKER_APPLICATIONS)
     similar = [j for j in data.JOBS if j["industry"] == job["industry"] and j["id"] != job_id][:3]
     return render_template("job_details.html", job=job, is_saved=is_saved, has_applied=has_applied,
-                           similar=similar, profile_percent=percent, resume_info=resume_info,
-                           salary_label=data.salary_label)
+                            similar=similar, seeker=data.SEEKER, salary_label=data.salary_label)
 
 
 @app.route("/dashboard/seeker")
-@seeker_required
 def seeker_dashboard():
-    ctx = seeker_portal.portal_context()
-    apps = seeker_portal._applications_view(ctx["row"]["id"])
-    counts = {st: sum(1 for a in apps if a["status"] == st) for st in store.APPLICATION_STATUSES}
-    saved = [j for j in (data.get_job(i) for i in store.saved_job_ids(ctx["row"]["id"])) if j]
-    return render_template("seeker_dashboard.html", **ctx, applications=apps, status_counts=counts,
-                           saved=saved, statuses=store.APPLICATION_STATUSES,
-                           resume_updated=store.format_date(ctx["resume"]["updated_at"]) if ctx["resume"] else "",
-                           salary_label=data.salary_label)
+    apps = []
+    for a in data.SEEKER_APPLICATIONS:
+        job = data.get_job(a["job_id"])
+        if job:
+            apps.append({**a, "job": job})
+    saved = [data.get_job(jid) for jid in data.SEEKER_SAVED_JOB_IDS if data.get_job(jid)]
+    recommended = [j for j in data.JOBS
+                   if j["status"] == "Approved"
+                   and any(t in data.SEEKER["skills"] for t in j["tags"])
+                   and j["id"] not in [a["job_id"] for a in data.SEEKER_APPLICATIONS]][:3]
+    for i, j in enumerate(recommended):
+        j["_match"] = 92 - i * 6
+    pipeline_counts = {s: sum(1 for a in apps if a["stage"] == s) for s in data.APPLICATION_STAGES}
+    return render_template("seeker_dashboard.html", seeker=data.SEEKER, applications=apps,
+                            saved=saved, recommended=recommended, stages=data.APPLICATION_STAGES,
+                            pipeline_counts=pipeline_counts, salary_label=data.salary_label)
 
 
 @app.route("/dashboard/employer")
-@employer_required
 def employer_dashboard():
-    employer = current_employer()
-    my_jobs = sorted(data.jobs_for_employer(employer), key=lambda j: j["posted_days_ago"])
-    live_jobs = [j for j in my_jobs if j["status"] == "Approved"]
-    my_candidates = data.candidates_for_employer(employer)
-    shortlisted = sum(1 for c in my_candidates if c["stage"] in ("Shortlisted", "Interview", "Hired"))
-    recent_applicants = sorted(my_candidates, key=lambda c: c["applied_date"], reverse=True)[:5]
-    return render_template(
-        "employer_dashboard.html", company=current_company(), my_jobs=my_jobs,
-        active_jobs=len(live_jobs),
-        total_views=sum(j["views"] for j in my_jobs),
-        total_apps=sum(j["applications_count"] for j in my_jobs),
-        shortlisted=shortlisted, recent_applicants=recent_applicants)
+    my_jobs = [j for j in data.JOBS if j["id"] in data.EMPLOYER["jobs_posted_ids"]]
+    total_views = sum(j["views"] for j in my_jobs)
+    total_apps = sum(j["applications_count"] for j in my_jobs)
+    shortlisted = sum(1 for c in data.CANDIDATES if c["stage"] in ("Shortlisted", "Interview", "Hired"))
+    recent_applicants = sorted(data.CANDIDATES, key=lambda c: c["applied_date"], reverse=True)[:5]
+    return render_template("employer_dashboard.html", employer=data.EMPLOYER, my_jobs=my_jobs,
+                            total_views=total_views, total_apps=total_apps, shortlisted=shortlisted,
+                            recent_applicants=recent_applicants, salary_label=data.salary_label)
 
 
 @app.route("/post-job")
-@employer_required
 def post_job():
     return render_template("post_job.html", industries=data.INDUSTRIES, job_types=data.JOB_TYPES,
                             work_modes=data.WORK_MODES, experience_levels=data.EXPERIENCE_LEVELS,
@@ -214,19 +138,15 @@ def pricing():
 
 
 @app.route("/checkout")
-@employer_required
 def checkout():
     package_id = request.args.get("package", "featured")
     package = next((p for p in data.PACKAGES if p["id"] == package_id), data.PACKAGES[1])
-    draft = data.DRAFT_JOBS.get(current_employer()["id"], {})
-    return render_template("checkout.html", package=package, draft=draft)
+    return render_template("checkout.html", package=package, draft=data.DRAFT_JOB)
 
 
 @app.route("/applicants")
-@employer_required
 def applicants():
-    mine = data.candidates_for_employer(current_employer())
-    grouped = {s: [c for c in mine if c["stage"] == s] for s in data.STAGES}
+    grouped = {s: [c for c in data.CANDIDATES if c["stage"] == s] for s in data.STAGES}
     return render_template("applicants.html", grouped=grouped, stages=data.STAGES)
 
 
@@ -249,29 +169,44 @@ def not_found(e):
 # --------------------------------------------------------------- API ----
 @app.post("/api/demo-role")
 def api_demo_role():
-    role = (request.json or {}).get("role", "guest")
-    if role not in ("guest", "seeker", "admin", "employer"):
-        return jsonify({"ok": False}), 400
-    # Employer and job-seeker access are real now: those dashboards send visitors to a login page.
-    # Choosing a different persona leaves any account you were signed in to.
-    for key in ("employer_id", "seeker_id"):
-        session.pop(key, None)
-    session["demo_role"] = role if role in ("guest", "admin") else "guest"
+    role = request.json.get("role", "guest")
+    session["demo_role"] = role
     return jsonify({"ok": True, "role": role})
 
 
+@app.post("/api/jobs/<int:job_id>/save")
+def api_toggle_save(job_id):
+    if job_id in data.SEEKER_SAVED_JOB_IDS:
+        data.SEEKER_SAVED_JOB_IDS.discard(job_id)
+        saved = False
+    else:
+        data.SEEKER_SAVED_JOB_IDS.add(job_id)
+        saved = True
+    return jsonify({"ok": True, "saved": saved, "saved_count": len(data.SEEKER_SAVED_JOB_IDS)})
+
+
+@app.post("/api/jobs/<int:job_id>/apply")
+def api_apply(job_id):
+    if not any(a["job_id"] == job_id for a in data.SEEKER_APPLICATIONS):
+        data.SEEKER_APPLICATIONS.append({
+            "job_id": job_id, "stage": "Applied",
+            "applied_date": date.today().isoformat(),
+        })
+        job = data.get_job(job_id)
+        if job:
+            job["applications_count"] += 1
+    return jsonify({"ok": True})
+
+
 @app.post("/api/post-job")
-@employer_required
 def api_post_job():
     payload = request.json or {}
-    employer, company = current_employer(), current_company()
     job = {
         "id": data.next_id(),
-        "employer_id": employer["id"],
         "title": payload.get("title", "Untitled role"),
-        "company": company["name"],
-        "company_initials": company["initials"],
-        "company_color": company["color"],
+        "company": data.EMPLOYER["company"],
+        "company_initials": data.EMPLOYER["initials"],
+        "company_color": data.EMPLOYER["color"],
         "location": payload.get("location", data.LOCATIONS[0]),
         "type": payload.get("type", data.JOB_TYPES[0]),
         "mode": payload.get("mode", data.WORK_MODES[0]),
@@ -291,33 +226,33 @@ def api_post_job():
         "responsibilities": ["Deliver against role objectives", "Work closely with the team"],
         "requirements": [f"Experience level: {payload.get('experience', 'Not specified')}"],
         "benefits": ["Flexible working arrangements"],
-        "about_company": f"{company['name']} is hiring through NEXORA.",
+        "about_company": f"{data.EMPLOYER['company']} is hiring through NEXORA.",
     }
     data.JOBS.append(job)
-    data.DRAFT_JOBS[employer["id"]] = {"job_id": job["id"], "title": job["title"]}
+    data.DRAFT_JOB.clear()
+    data.DRAFT_JOB.update({"job_id": job["id"], "title": job["title"]})
     return jsonify({"ok": True, "job_id": job["id"]})
 
 
 @app.post("/api/checkout")
-@employer_required
 def api_checkout():
     payload = request.json or {}
-    employer = current_employer()
-    job_id = data.DRAFT_JOBS.get(employer["id"], {}).get("job_id")
+    job_id = data.DRAFT_JOB.get("job_id")
     job = data.get_job(job_id) if job_id else None
     package_id = payload.get("package", "featured")
-    if job and job.get("employer_id") == employer["id"]:
+    if job:
         job["status"] = "Approved"
         job["featured"] = package_id in ("featured", "premium")
         job["urgent"] = package_id == "urgent"
+        if job_id not in data.EMPLOYER["jobs_posted_ids"]:
+            data.EMPLOYER["jobs_posted_ids"].append(job_id)
     return jsonify({"ok": True, "job_id": job_id})
 
 
 @app.post("/api/applicants/<int:candidate_id>/stage")
-@employer_required
 def api_move_stage(candidate_id):
     new_stage = (request.json or {}).get("stage")
-    for c in data.candidates_for_employer(current_employer()):
+    for c in data.CANDIDATES:
         if c["id"] == candidate_id and new_stage in data.STAGES:
             c["stage"] = new_stage
             return jsonify({"ok": True, "stage": new_stage})
@@ -335,25 +270,6 @@ def api_moderate(job_id):
         job["status"] = mapping[action]
         return jsonify({"ok": True, "status": job["status"]})
     return jsonify({"ok": False}), 400
-
-
-# ------------------------------------------------------------------ CLI --
-@app.cli.command("seed-demo")
-def seed_demo_command():
-    """Create the demo employer (Northlane Digital) and demo job seeker (Jordan Reyes)."""
-    import click
-    password = os.environ.get("DEMO_EMPLOYER_PASSWORD") or secrets.token_urlsafe(9) + "7"
-    employer_auth.seed_demo(password)
-    seeker_auth.seed_demo(password)
-    click.echo(f"Demo employer ready:   {employer_auth.DEMO_EMAIL} / {password}")
-    click.echo(f"Demo job seeker ready: {seeker_auth.DEMO_EMAIL} / {password}")
-
-
-# Optional: auto-create the demo employer on boot (handy on hosts with an ephemeral database).
-if os.environ.get("NEXORA_SEED_DEMO") == "1" and os.environ.get("DEMO_EMPLOYER_PASSWORD"):
-    with app.app_context():
-        employer_auth.seed_demo(os.environ["DEMO_EMPLOYER_PASSWORD"])
-        seeker_auth.seed_demo(os.environ["DEMO_EMPLOYER_PASSWORD"])
 
 
 if __name__ == "__main__":
