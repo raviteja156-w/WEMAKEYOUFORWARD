@@ -63,7 +63,11 @@ def current_company():
     if not emp:
         return None
     if "company" not in g:
-        g.company = db.get_company(emp["id"])
+        comp = db.get_company(emp["id"])
+        if comp:
+            meta = session.get(f"company_meta_{emp['id']}", {})
+            comp = {**comp, **meta}
+        g.company = comp
     return g.company
 
 
@@ -204,14 +208,18 @@ def login():
                     auth = db.get_auth_client()
                     result = auth.auth.sign_in_with_password({"email": email, "password": password})
                     auth_user = getattr(result, "user", None)
-                    if auth_user and emp:
-                        ac.clear_failures(key)
-                        _start_session(emp["id"])
-                        return _after_login(emp, next_url)
-                    if auth_user and not emp:
-                        errors["form"] = "Your Supabase account is not enabled as a NEXORA employer. Contact the NEXORA administrator."
-                    else:
-                        errors["form"] = "Incorrect email or password."
+                    if auth_user:
+                        if not emp:
+                            try:
+                                employer_id = db.create_employer(email, password_hash=None, onboarding_complete=False)
+                                emp = db.get_employer(employer_id)
+                            except Exception:
+                                emp = db.get_employer_by_email(email)
+                        if emp:
+                            ac.clear_failures(key)
+                            _start_session(emp["id"])
+                            return _after_login(emp, next_url)
+                    errors["form"] = "Incorrect email or password."
                 except Exception:
                     ac.record_failure(key)
                     errors["form"] = "Incorrect email or password, or email confirmation is still pending."
@@ -228,24 +236,32 @@ def logout():
 
 # --------------------------------------------------------------- setup --
 @bp.route("/setup", methods=["GET", "POST"])
+@bp.route("/profile", methods=["GET", "POST"])
 @employer_login_required
 def setup():
     emp = current_employer()
     existing = db.get_company(emp["id"])
     editing = bool(emp["onboarding_complete"])
+    show_overview = editing and request.args.get("edit") != "1"
     next_url = safe_next(request.values.get("next"))
     errors = {}
 
     if request.method == "POST":
         form = request.form
+        c_name = v.clean_text(form.get("company_name"), 100)
+        c_contact = v.clean_text(form.get("contact_name"), 100)
+        parts = c_contact.split() if c_contact else []
+        c_first = parts[0] if parts else (v.clean_text(form.get("contact_first"), 50) or "Recruiter")
+        c_last = " ".join(parts[1:]) if len(parts) > 1 else (v.clean_text(form.get("contact_last"), 50) or "Contact")
+
         f = {
-            "name": v.clean_text(form.get("company_name"), 100),
+            "name": c_name,
             "country": form.get("country", "AU"),
-            "registered_name": v.clean_text(form.get("registered_name"), 150),
+            "registered_name": v.clean_text(form.get("registered_name") or c_name, 150),
             "is_registered": form.get("is_registered", "yes") == "yes",
             "abn": v.digits_only(form.get("abn")),
-            "contact_first": v.clean_text(form.get("contact_first"), 50),
-            "contact_last": v.clean_text(form.get("contact_last"), 50),
+            "contact_first": c_first,
+            "contact_last": c_last,
             "phone_country": form.get("phone_country", "AU"),
             "phone": form.get("phone", ""),
         }
@@ -254,29 +270,47 @@ def setup():
         if f["country"] not in v.COUNTRY_BY_CODE:
             errors["country"] = "Choose a country."
         if len(f["registered_name"]) < 2:
-            errors["registered_name"] = "Enter your registered business name."
+            f["registered_name"] = f["name"]
         if f["is_registered"] and f["abn"] and not v.is_valid_abn(f["abn"]):
             errors["abn"] = "That ABN doesn't look right. Check the 11 digits and try again."
         if not f["is_registered"]:
             f["abn"] = ""
         if not f["contact_first"]:
-            errors["contact_first"] = "Enter a first name."
+            f["contact_first"] = "Recruiter"
         if not f["contact_last"]:
-            errors["contact_last"] = "Enter a last name."
+            f["contact_last"] = "Contact"
         if f["phone_country"] not in v.COUNTRY_BY_CODE:
-            errors["phone"] = "Choose a country code."
-        else:
+            f["phone_country"] = "AU"
+        if f["phone"]:
             digits, err = v.normalise_phone(f["phone_country"], f["phone"])
-            if err:
-                errors["phone"] = err
-            f["phone"] = digits
+            if not err:
+                f["phone"] = digits
+
+        meta = {
+            "website": form.get("website", "").strip(),
+            "industry": form.get("industry", "Information Technology (IT)").strip(),
+            "company_size": form.get("company_size", "11 - 50 employees").strip(),
+            "location": form.get("location", "Sydney, NSW").strip(),
+            "logo_url": form.get("logo_url", "").strip(),
+            "contact_name": c_contact or f"{f['contact_first']} {f['contact_last']}".strip(),
+            "work_email": form.get("work_email", "").strip(),
+            "job_roles": form.get("job_roles", "").strip(),
+            "preferred_locations": form.get("preferred_locations", "").strip(),
+            "employment_types": form.get("employment_types", "").strip(),
+            "work_arrangements": form.get("work_arrangements", "").strip(),
+        }
+        session[f"company_meta_{emp['id']}"] = meta
 
         if not errors:
             db.save_company(emp["id"], {**f, "is_registered": int(f["is_registered"])})
             flash("Company profile saved." if editing else "You're all set. Welcome to NEXORA.", "success")
             return redirect(next_url or url_for("employer_dashboard"))
-        values = {**f, "phone": form.get("phone", ""), "abn": form.get("abn", "")}
+        values = {**f, **meta, "phone": form.get("phone", ""), "abn": form.get("abn", "")}
     else:
+        meta = session.get(f"company_meta_{emp['id']}", {})
+        contact_full = meta.get("contact_name")
+        if not contact_full and existing:
+            contact_full = f"{existing.get('contact_first', '')} {existing.get('contact_last', '')}".strip()
         values = {
             "name": existing["name"] if existing else "",
             "country": existing["country"] if existing else "AU",
@@ -287,9 +321,21 @@ def setup():
             "contact_last": existing["contact_last"] if existing else "",
             "phone_country": existing["phone_country"] if existing else "AU",
             "phone": existing["phone"] if existing else "",
+            "website": meta.get("website", ""),
+            "industry": meta.get("industry", "Information Technology (IT)"),
+            "company_size": meta.get("company_size", "11 - 50 employees"),
+            "location": meta.get("location", "Sydney, NSW"),
+            "logo_url": meta.get("logo_url", ""),
+            "contact_name": contact_full or "",
+            "work_email": meta.get("work_email", emp.get("email", "")),
+            "job_roles": meta.get("job_roles", "Software Engineer, Data Analyst, DevOps Engineer, UI/UX Designer"),
+            "preferred_locations": meta.get("preferred_locations", "Sydney, NSW, Melbourne, VIC, Brisbane, QLD"),
+            "employment_types": meta.get("employment_types", "Full-time, Part-time, Contract, Internship"),
+            "work_arrangements": meta.get("work_arrangements", "On-site, Hybrid, Remote"),
         }
     return render_template("employer/setup.html", errors=errors, values=values, editing=editing,
-                           next_url=next_url, countries=v.COUNTRIES)
+                           show_overview=show_overview, next_url=next_url, countries=v.COUNTRIES,
+                           company=current_company())
 
 
 # ------------------------------------------------------ password reset --

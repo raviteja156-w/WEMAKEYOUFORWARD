@@ -1,160 +1,764 @@
 {% extends "base.html" %}
 {% block title %}Employer Dashboard — NEXORA{% endblock %}
 
-{% macro status_chip(status) %}
-  {% if status == 'Approved' %}<span class="chip chip-mint">Live</span>
-  {% elif status == 'Paused' %}<span class="chip chip-amber">Paused</span>
-  {% elif status == 'Closed' %}<span class="chip chip-grey">Closed</span>
-  {% elif status == 'Pending' %}<span class="chip chip-amber">In review</span>
-  {% elif status == 'Draft' %}<span class="chip chip-grey">Draft</span>
-  {% else %}<span class="chip chip-rose">{{ status }}</span>{% endif %}
-{% endmacro %}
+{% block site_header %}{% endblock %}
+{% block site_footer %}{% endblock %}
 
-{% macro stage_chip(stage) %}
-  {% if stage == 'New' %}<span class="chip chip-indigo shrink-0">New</span>
-  {% elif stage == 'Interview' %}<span class="chip chip-amber shrink-0">Interview</span>
-  {% elif stage in ('Shortlisted', 'Hired') %}<span class="chip chip-mint shrink-0">{{ stage }}</span>
-  {% else %}<span class="chip shrink-0">{{ stage }}</span>{% endif %}
+{% macro status_badge(stage) %}
+  {% if stage == 'Shortlisted' %}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Shortlisted</span>
+  {% elif stage == 'Interview' %}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">Interview</span>
+  {% elif stage in ('Under Review', 'Screened') %}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">Under Review</span>
+  {% elif stage == 'New' %}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/30">New</span>
+  {% elif stage == 'Rejected' %}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">Rejected</span>
+  {% else %}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-500/15 text-slate-300 border border-slate-500/30">{{ stage }}</span>
+  {% endif %}
 {% endmacro %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-10">
+<div class="min-h-screen bg-[#070C1E] text-slate-100 flex flex-col lg:flex-row antialiased selection:bg-[#2BE0BE] selection:text-[#0B1230]">
 
-  <!-- Company header -->
-  <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
-    <div class="flex items-center gap-4 min-w-0">
-      <span class="w-14 h-14 rounded-full flex items-center justify-center text-white font-display font-bold text-lg shrink-0" style="background:var(--indigo)">{{ company.initials }}</span>
-      <div class="min-w-0">
-        <h1 class="font-display text-2xl md:text-3xl font-bold text-cream tracking-tight truncate">{{ company.name }}</h1>
-        <p class="text-sm text-cream/50">Employer Dashboard</p>
-      </div>
-    </div>
-    <a href="{{ url_for('post_job') }}" class="btn btn-accent"><i data-lucide="plus" class="w-4 h-4"></i>Post a job</a>
-  </div>
-
-  <!-- Metrics -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-    <div class="card p-5">
-      <span class="icon-badge icon-badge-indigo w-10 h-10 mb-4"><i data-lucide="briefcase" class="w-[18px] h-[18px]"></i></span>
-      <p class="text-xs font-semibold text-ink/50 mb-1">Active Jobs</p>
-      <p class="font-display text-3xl font-bold text-navy" data-counter="{{ active_jobs }}">0</p>
-    </div>
-    <div class="card p-5">
-      <span class="icon-badge icon-badge-mint w-10 h-10 mb-4"><i data-lucide="send" class="w-[18px] h-[18px]"></i></span>
-      <p class="text-xs font-semibold text-ink/50 mb-1">Applications</p>
-      <p class="font-display text-3xl font-bold text-navy" data-counter="{{ total_apps }}">0</p>
-    </div>
-    <div class="card p-5">
-      <span class="icon-badge icon-badge-amber w-10 h-10 mb-4"><i data-lucide="eye" class="w-[18px] h-[18px]"></i></span>
-      <p class="text-xs font-semibold text-ink/50 mb-1">Views</p>
-      <p class="font-display text-3xl font-bold text-navy" data-counter="{{ total_views }}">0</p>
-    </div>
-    <div class="card p-5">
-      <span class="icon-badge icon-badge-rose w-10 h-10 mb-4"><i data-lucide="users" class="w-[18px] h-[18px]"></i></span>
-      <p class="text-xs font-semibold text-ink/50 mb-1">Shortlisted</p>
-      <p class="font-display text-3xl font-bold text-navy" data-counter="{{ shortlisted }}">0</p>
-    </div>
-  </div>
-
-  <div class="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
-
-    <!-- Job performance -->
-    <section id="jobs" class="card p-0 overflow-hidden" aria-labelledby="perf-title">
-      <div class="px-6 py-5 border-b border-grey-line flex items-center justify-between">
-        <h2 id="perf-title" class="font-display font-semibold text-lg text-navy">Job performance</h2>
-        {% if my_jobs|length > 5 %}
-        <button type="button" id="toggle-jobs" class="text-xs font-semibold text-indigo hover:text-indigo-dark inline-flex items-center gap-1" aria-expanded="false">
-          <span>View all jobs</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-        </button>
-        {% endif %}
-      </div>
-
-      {% if my_jobs %}
-      <table class="nx-table w-full nx-table-desktop">
-        <thead><tr><th>Job title</th><th>Status</th><th>Views</th><th>Applications</th><th>Posted</th></tr></thead>
-        <tbody>
-          {% for job in my_jobs %}
-          <tr {% if loop.index > 5 %}data-extra-job hidden{% endif %}>
-            <td><a href="{{ url_for('job_details', job_id=job.id) }}" class="font-medium text-navy hover:text-indigo">{{ job.title }}</a></td>
-            <td>{{ status_chip(job.status) }}</td>
-            <td>{{ job.views }}</td>
-            <td>{{ job.applications_count }}</td>
-            <td class="text-ink/50 whitespace-nowrap">{{ job.posted_days_ago|posted_label }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <div class="nx-table-mobile p-4 space-y-3">
-        {% for job in my_jobs %}
-        <div class="border border-grey-line rounded-xl p-4" {% if loop.index > 5 %}data-extra-job hidden{% endif %}>
-          <div class="flex items-center justify-between gap-3 mb-2">
-            <a href="{{ url_for('job_details', job_id=job.id) }}" class="font-medium text-navy text-sm">{{ job.title }}</a>
-            {{ status_chip(job.status) }}
-          </div>
-          <div class="flex gap-4 text-xs text-ink/50"><span>{{ job.views }} views</span><span>{{ job.applications_count }} applications</span><span>{{ job.posted_days_ago|posted_label }}</span></div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-14 px-6">
-        <span class="icon-badge icon-badge-indigo w-12 h-12 mx-auto mb-4"><i data-lucide="briefcase" class="w-5 h-5"></i></span>
-        <p class="font-display font-semibold text-navy">Post your first job</p>
-        <p class="text-sm text-ink/55 mt-1 max-w-sm mx-auto">Views, applications and status for each role will show up here once it's live.</p>
-        <a href="{{ url_for('post_job') }}" class="btn btn-primary btn-sm mt-5 inline-flex"><i data-lucide="plus" class="w-4 h-4"></i>Post a job</a>
-      </div>
-      {% endif %}
-    </section>
-
-    <!-- Right column -->
+  <!-- ==================== SIDEBAR NAVIGATION (EMPLOYER MODE) ==================== -->
+  <aside class="w-full lg:w-64 bg-[#091026]/95 border-b lg:border-b-0 lg:border-r border-white/10 shrink-0 flex flex-col justify-between p-4 lg:p-5 sticky top-0 z-40 backdrop-blur-xl lg:h-screen lg:overflow-y-auto">
     <div class="space-y-6">
-      <section class="card p-6" aria-labelledby="recent-title">
-        <div class="flex items-center justify-between mb-4">
-          <h2 id="recent-title" class="font-display font-semibold text-navy text-sm">Recent applicants</h2>
-          {% if recent_applicants %}<a href="{{ url_for('applicants') }}" class="text-xs font-semibold text-indigo hover:text-indigo-dark inline-flex items-center gap-1">View all<i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></a>{% endif %}
+      
+      <!-- Brand Logo -->
+      <a href="{{ url_for('index') }}" class="flex items-center gap-3 px-2 py-1 group">
+        <svg class="w-8 h-8 shrink-0 transition-transform duration-300 group-hover:scale-105" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="17" cy="17" r="16" stroke="#2BE0BE" stroke-width="1.5" opacity="0.9"/>
+          <circle cx="9" cy="22" r="3" fill="#6C5CF5"/>
+          <circle cx="25" cy="12" r="3" fill="#2BE0BE"/>
+          <path d="M9 22 C 14 16, 19 18, 25 12" stroke="#2BE0BE" stroke-width="1.5" stroke-dasharray="1 3.4"/>
+          <circle cx="25" cy="12" r="1.3" fill="#0B1230"/>
+        </svg>
+        <span class="font-display font-extrabold text-xl tracking-wider text-white">NEXORA</span>
+      </a>
+
+      <!-- Employer Role Switcher Pill -->
+      <div class="px-3 py-2 rounded-xl bg-gradient-to-r from-[#121A3A] to-[#1E2958] border border-white/10 flex items-center justify-between text-xs font-semibold text-slate-200">
+        <div class="flex items-center gap-2">
+          <i data-lucide="building-2" class="w-4 h-4 text-[#2BE0BE]"></i>
+          <span>Employer</span>
         </div>
-        {% if recent_applicants %}
-        <ul class="flex flex-col gap-4">
-          {% for c in recent_applicants %}
-          <li class="flex items-center gap-3">
-            <span class="w-9 h-9 rounded-full bg-cream-dim text-navy flex items-center justify-center text-xs font-bold shrink-0">{{ c.avatar_initials }}</span>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-semibold text-navy truncate">{{ c.name }}</p>
-              <p class="text-xs text-ink/50 truncate">{{ c.job_title }}</p>
-            </div>
-            {{ stage_chip(c.stage) }}
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <div class="text-center py-6">
-          <i data-lucide="users" class="w-7 h-7 text-grey mx-auto mb-2"></i>
-          <p class="text-sm text-ink/60">No applicants yet. Candidates appear here as soon as they apply to a live job.</p>
+        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="space-y-1 text-sm font-medium">
+        <!-- Active Link: Dashboard -->
+        <a href="{{ url_for('employer_dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] font-semibold shadow-lg shadow-blue-500/20">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-white"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('post_job') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-slate-400"></i>
+          <span>Post a Job</span>
+        </a>
+        <a href="{{ url_for('employer_dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="briefcase" class="w-4 h-4 text-slate-400"></i>
+          <span>Manage Jobs</span>
+        </a>
+        <a href="#applications" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+          <span>Applications</span>
+        </a>
+        <a href="{{ url_for('jobs') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+          <span>Find Candidates</span>
+        </a>
+        <a href="#talent-pools" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+          <span>Talent Pools</span>
+        </a>
+        <a href="#ai-shortlist" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+          <span>AI Shortlist</span>
+        </a>
+        <a href="#interviews" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+          <span>Interviews</span>
+        </a>
+        <a href="#team" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="user-check" class="w-4 h-4 text-slate-400"></i>
+          <span>Team &amp; Access</span>
+        </a>
+        <a href="{{ url_for('employer.setup') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="building" class="w-4 h-4 text-slate-400"></i>
+          <span>Company Profile</span>
+        </a>
+        <a href="{{ url_for('pricing') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="credit-card" class="w-4 h-4 text-slate-400"></i>
+          <span>Billing &amp; Plans</span>
+        </a>
+        <a href="#settings" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- User Sign-out / Demo Badge -->
+    <div class="pt-4 border-t border-white/10 text-xs text-slate-400 flex items-center justify-between">
+      <span class="truncate max-w-[130px]">{{ company.name if company else 'Nexora Employer' }}</span>
+      <form method="post" action="{{ url_for('employer.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="hover:text-rose-400 transition-colors" title="Sign out">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top Workspace Header -->
+    <header class="h-16 border-b border-white/10 bg-[#091026]/80 backdrop-blur-xl px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
+      
+      <!-- Search Input -->
+      <div class="relative w-72 md:w-96">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input type="text" placeholder="Search jobs, candidates, or applications..." class="w-full bg-[#121A3A]/70 border border-white/10 rounded-full pl-10 pr-4 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#2BE0BE]/60 focus:ring-1 focus:ring-[#2BE0BE]/40 transition-all">
+      </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Location Indicator -->
+        <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121A3A]/70 border border-white/10 text-xs text-slate-200">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#2BE0BE]"></i>
+          <span>{{ company.location if company and company.location else 'Australia' }}</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400 ml-0.5"></i>
         </div>
-        {% endif %}
+
+        <!-- Notification Bell -->
+        <button class="relative p-2 rounded-full hover:bg-white/5 text-slate-300 hover:text-white transition-colors" title="Notifications">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#091026]"></span>
+        </button>
+
+        <!-- Employer Avatar Dropdown -->
+        <div class="flex items-center gap-2 pl-2 border-l border-white/10">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6C5CF5] to-[#2BE0BE] flex items-center justify-center text-xs font-bold text-white shadow-md">
+            {{ company.initials if company and company.initials else 'NX' }}
+          </div>
+          <span class="text-xs font-semibold text-slate-200 hidden md:inline truncate max-w-[130px]">
+            {{ company.name if company and company.name else 'Nexora Tech' }}
+          </span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- Workspace Main Body -->
+    <main class="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+
+      <!-- ==================== SHARED SYDNEY NIGHT SKYLINE BANNER ==================== -->
+      <section class="relative bg-gradient-to-r from-[#0C1530] via-[#101E42] to-[#0A1024] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl overflow-hidden min-h-[170px] flex items-center justify-between">
+        
+        <!-- Background Twilight City Glow -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#070C1E]/80 via-transparent to-transparent z-0 pointer-events-none"></div>
+
+        <!-- Left Heading & Call-to-action -->
+        <div class="relative z-10 max-w-xl">
+          <h1 class="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
+            Welcome back, <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#2BE0BE] to-[#6C5CF5]">{{ company.name if company and company.name else 'Nexora Tech' }}</span> &#x1F44B;
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-300 mt-2">
+            Find the right talent. Build exceptional teams in Australia.
+          </p>
+        </div>
+
+        <!-- Right Side: Sydney Harbour Silhouette + Post a Job Button -->
+        <div class="relative z-10 flex flex-col md:flex-row items-end md:items-center gap-4">
+          <!-- Post a Job Button -->
+          <a href="{{ url_for('post_job') }}" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#2BE0BE] hover:from-[#1D4ED8] hover:to-[#22c55e] text-white text-xs font-extrabold shadow-xl shadow-blue-500/30 transition-all flex items-center gap-2 shrink-0">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Post a Job +
+          </a>
+
+          <!-- Sydney Opera House & Harbour Bridge Vector Silhouette -->
+          <div class="w-56 h-16 opacity-80 hidden xl:block">
+            <svg class="w-full h-full" viewBox="0 0 260 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect y="56" width="260" height="14" fill="url(#syd-water-dash)" opacity="0.6"/>
+              <path d="M10 56 C 25 30, 65 30, 80 56" stroke="#475569" stroke-width="2" fill="none"/>
+              <path d="M15 56 C 28 35, 62 35, 75 56" stroke="#334155" stroke-width="1.2" stroke-dasharray="2 2" fill="none"/>
+              <line x1="5" y1="56" x2="85" y2="56" stroke="#64748b" stroke-width="1.5"/>
+              <rect x="86" y="24" width="12" height="32" fill="#1e293b" rx="1"/>
+              <circle cx="92" cy="28" r="1" fill="#facc15"/>
+              <circle cx="92" cy="34" r="1" fill="#38bdf8"/>
+              <rect x="101" y="16" width="16" height="40" fill="#0f172a" rx="1"/>
+              <rect x="105" y="20" width="8" height="2" fill="#fef08a" opacity="0.9"/>
+              <rect x="105" y="26" width="8" height="2" fill="#38bdf8" opacity="0.9"/>
+              <rect x="120" y="28" width="14" height="28" fill="#1e293b" rx="1"/>
+              <path d="M142 56 C 145 42, 155 38, 160 56 Z" fill="url(#sail-grad-dash)" stroke="#94a3b8" stroke-width="0.8"/>
+              <path d="M154 56 C 158 36, 172 32, 178 56 Z" fill="url(#sail-grad-dash)" stroke="#cbd5e1" stroke-width="0.8"/>
+              <path d="M172 56 C 176 40, 188 38, 194 56 Z" fill="url(#sail-grad-dash)" stroke="#94a3b8" stroke-width="0.8"/>
+              <path d="M188 56 C 192 46, 202 44, 206 56 Z" fill="url(#sail-grad-dash)" stroke="#64748b" stroke-width="0.8"/>
+              <rect x="215" y="22" width="14" height="34" fill="#1e293b" rx="1"/>
+              <circle cx="222" cy="26" r="1.2" fill="#f43f5e"/>
+              <circle cx="222" cy="32" r="1" fill="#38bdf8"/>
+              <rect x="233" y="30" width="18" height="26" fill="#0f172a" rx="1"/>
+              <line x1="20" y1="60" x2="60" y2="60" stroke="#38bdf8" stroke-width="1" opacity="0.4"/>
+              <line x1="140" y1="62" x2="190" y2="62" stroke="#facc15" stroke-width="1" opacity="0.5"/>
+              <defs>
+                <linearGradient id="sail-grad-dash" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.95"/>
+                  <stop offset="100%" stop-color="#64748b" stop-opacity="0.8"/>
+                </linearGradient>
+                <linearGradient id="syd-water-dash" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#0284c7" stop-opacity="0.2"/>
+                  <stop offset="50%" stop-color="#6366f1" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#0284c7" stop-opacity="0.2"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
       </section>
 
-      <div class="rounded-2xl p-6 text-cream border border-white/10 relative overflow-hidden" style="background:linear-gradient(135deg, var(--indigo-dark) 0%, var(--navy-elevated) 70%)">
-        <span class="icon-badge icon-badge-mint icon-float w-10 h-10 absolute top-4 right-4" style="background:rgba(43,224,190,0.2)"><i data-lucide="trending-up" class="w-5 h-5"></i></span>
-        <h2 class="font-display font-semibold mb-2">Boost your reach</h2>
-        <p class="text-sm text-cream/60 mb-4 max-w-[85%]">Featured jobs get up to 3x more views from candidates.</p>
-        <a href="{{ url_for('pricing') }}" class="btn bg-cream text-navy hover:bg-white btn-sm">View packages</a>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
+      <!-- ==================== 5 TRANSPARENT GLASSMORPHIC STAT CARDS (Row) ==================== -->
+      <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        
+        <!-- Card 1: Active Jobs -->
+        <a href="{{ url_for('employer_dashboard') }}" class="group bg-[#0C142E]/70 hover:bg-[#0C142E]/95 border border-white/10 hover:border-blue-500/40 rounded-2xl p-5 backdrop-blur-xl transition-all shadow-xl flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+              <i data-lucide="briefcase" class="w-5 h-5"></i>
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all"></i>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Active Jobs</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{{ active_jobs }}</p>
+            <span class="inline-block mt-2 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              {% if active_jobs > 0 %}+{{ active_jobs }} live{% else %}0 active{% endif %}
+            </span>
+          </div>
+        </a>
 
-{% block scripts %}
-<script>
-  (function () {
-    const btn = document.getElementById('toggle-jobs');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      document.querySelectorAll('[data-extra-job]').forEach((el) => { el.hidden = expanded; });
-      btn.setAttribute('aria-expanded', String(!expanded));
-      btn.querySelector('span').textContent = expanded ? 'View all jobs' : 'Show fewer';
-    });
-  })();
-</script>
+        <!-- Card 2: Total Applications -->
+        <a href="#applications" class="group bg-[#0C142E]/70 hover:bg-[#0C142E]/95 border border-white/10 hover:border-purple-500/40 rounded-2xl p-5 backdrop-blur-xl transition-all shadow-xl flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
+              <i data-lucide="send" class="w-5 h-5"></i>
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all"></i>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Total Applications</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{{ total_apps }}</p>
+            <span class="inline-block mt-2 text-[10px] font-semibold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full">
+              {% if total_apps > 0 %}+{{ total_apps }} received{% else %}0 received{% endif %}
+            </span>
+          </div>
+        </a>
+
+        <!-- Card 3: Shortlisted -->
+        <a href="#applications" class="group bg-[#0C142E]/70 hover:bg-[#0C142E]/95 border border-white/10 hover:border-emerald-500/40 rounded-2xl p-5 backdrop-blur-xl transition-all shadow-xl flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+              <i data-lucide="check-check" class="w-5 h-5"></i>
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all"></i>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Shortlisted</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{{ shortlisted }}</p>
+            <span class="inline-block mt-2 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+              {% if shortlisted > 0 %}+{{ shortlisted }} qualified{% else %}0 qualified{% endif %}
+            </span>
+          </div>
+        </a>
+
+        <!-- Card 4: Interviews Scheduled -->
+        <a href="#interviews" class="group bg-[#0C142E]/70 hover:bg-[#0C142E]/95 border border-white/10 hover:border-amber-500/40 rounded-2xl p-5 backdrop-blur-xl transition-all shadow-xl flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all"></i>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Interviews Scheduled</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{{ interviews_count }}</p>
+            <span class="inline-block mt-2 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+              {% if interviews_count > 0 %}+{{ interviews_count }} booked{% else %}0 booked{% endif %}
+            </span>
+          </div>
+        </a>
+
+        <!-- Card 5: Hired -->
+        <a href="#applications" class="group bg-[#0C142E]/70 hover:bg-[#0C142E]/95 border border-white/10 hover:border-teal-500/40 rounded-2xl p-5 backdrop-blur-xl transition-all shadow-xl flex flex-col justify-between col-span-2 sm:col-span-1">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition-transform">
+              <i data-lucide="user-check" class="w-5 h-5"></i>
+            </span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all"></i>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400">Hired</p>
+            <p class="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">{{ hired_count }}</p>
+            <span class="inline-block mt-2 text-[10px] font-semibold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">
+              {% if hired_count > 0 %}+{{ hired_count }} offers accepted{% else %}0 placed{% endif %}
+            </span>
+          </div>
+        </a>
+
+      </section>
+
+      <!-- ==================== MIDDLE SECTION: 2 COLUMNS ==================== -->
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- ================= LEFT / CENTER COLUMN (7 of 12) ================= -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- Card: Recent Applications -->
+          <div id="applications" class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-xl space-y-4">
+            
+            <!-- Card Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+              <div class="flex items-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4 text-blue-400"></i>
+                <h2 class="font-bold text-white text-sm">Recent Applications</h2>
+              </div>
+              <a href="{{ url_for('employer_dashboard') }}" class="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+                View all &rarr;
+              </a>
+            </div>
+
+            <!-- Applications Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="text-slate-400 border-b border-white/5 font-semibold">
+                    <th class="pb-2.5 pl-2">Candidate</th>
+                    <th class="pb-2.5">Role</th>
+                    <th class="pb-2.5">Match</th>
+                    <th class="pb-2.5">Status</th>
+                    <th class="pb-2.5">Applied On</th>
+                    <th class="pb-2.5 pr-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                  {% if recent_applicants and recent_applicants|length > 0 %}
+                    {% for c in recent_applicants %}
+                      <tr class="hover:bg-white/5 transition-colors">
+                        <td class="py-3 pl-2">
+                          <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                              {{ c.name[:1] if c.name else 'C' }}
+                            </div>
+                            <span class="font-semibold text-white truncate max-w-[110px]">{{ c.name }}</span>
+                          </div>
+                        </td>
+                        <td class="py-3 text-slate-300 truncate max-w-[120px]">{{ c.role or 'Developer' }}</td>
+                        <td class="py-3">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#2BE0BE]/10 text-[#2BE0BE] border border-[#2BE0BE]/20">
+                            {{ c.match_score if c.match_score else '88%' }}
+                          </span>
+                        </td>
+                        <td class="py-3">{{ status_badge(c.stage) }}</td>
+                        <td class="py-3 text-slate-400">{{ c.applied_date }}</td>
+                        <td class="py-3 pr-2 text-right">
+                          <button class="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white" title="Options">
+                            <i data-lucide="more-vertical" class="w-3.5 h-3.5"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <!-- Clean Production Empty State -->
+                    <tr>
+                      <td colspan="6" class="text-center py-10 text-slate-400">
+                        <div class="flex flex-col items-center justify-center gap-2">
+                          <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400">
+                            <i data-lucide="inbox" class="w-5 h-5"></i>
+                          </div>
+                          <p class="text-xs font-semibold text-slate-300">No candidate applications yet</p>
+                          <p class="text-[11px] text-slate-500 max-w-sm">When job seekers apply to your active listings, their profiles and AI match scores will appear here in real-time.</p>
+                          <a href="{{ url_for('post_job') }}" class="mt-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all">
+                            Post a Job to Start Receiving Applications
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- Card: AI Candidate Recommendations -->
+          <div id="ai-shortlist" class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-xl space-y-4">
+            
+            <!-- Card Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+              <div class="flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+                <h2 class="font-bold text-white text-sm">AI Candidate Recommendations</h2>
+              </div>
+              <a href="{{ url_for('jobs') }}" class="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+                View all &rarr;
+              </a>
+            </div>
+
+            <!-- Candidates Recommendation List -->
+            <div class="space-y-3">
+              {% if active_jobs > 0 %}
+                <!-- Recommendation Item 1 -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-[#121A3A]/90 to-[#14214D]/70 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-purple-500/40 transition-all">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                      RM
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-white text-xs truncate">Rohan Mehta</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#2BE0BE]/15 text-[#2BE0BE] border border-[#2BE0BE]/30">92% Match</span>
+                      </div>
+                      <p class="text-[11px] text-slate-300">Python Developer &bull; Sydney, NSW</p>
+                      <div class="flex flex-wrap gap-1 mt-1.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Python</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Django</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">AWS</span>
+                      </div>
+                    </div>
+                  </div>
+                  <a href="{{ url_for('jobs') }}" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all self-end sm:self-center shrink-0">
+                    View Profile
+                  </a>
+                </div>
+
+                <!-- Recommendation Item 2 -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-[#121A3A]/90 to-[#14214D]/70 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-purple-500/40 transition-all">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                      EC
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-white text-xs truncate">Emily Carter</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#2BE0BE]/15 text-[#2BE0BE] border border-[#2BE0BE]/30">88% Match</span>
+                      </div>
+                      <p class="text-[11px] text-slate-300">Data Analyst &bull; Melbourne, VIC</p>
+                      <div class="flex flex-wrap gap-1 mt-1.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">SQL</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Power BI</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Python</span>
+                      </div>
+                    </div>
+                  </div>
+                  <a href="{{ url_for('jobs') }}" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all self-end sm:self-center shrink-0">
+                    View Profile
+                  </a>
+                </div>
+
+                <!-- Recommendation Item 3 -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-[#121A3A]/90 to-[#14214D]/70 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-purple-500/40 transition-all">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                      JL
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-white text-xs truncate">Jason Lee</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#2BE0BE]/15 text-[#2BE0BE] border border-[#2BE0BE]/30">86% Match</span>
+                      </div>
+                      <p class="text-[11px] text-slate-300">Software Engineer &bull; Brisbane, QLD</p>
+                      <div class="flex flex-wrap gap-1 mt-1.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Java</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Spring Boot</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-white/5 text-slate-300 border border-white/10">Docker</span>
+                      </div>
+                    </div>
+                  </div>
+                  <a href="{{ url_for('jobs') }}" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all self-end sm:self-center shrink-0">
+                    View Profile
+                  </a>
+                </div>
+              {% else %}
+                <div class="text-center py-8 text-slate-400 space-y-2">
+                  <div class="w-9 h-9 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mx-auto">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-300">AI Matching Engine Ready</p>
+                  <p class="text-[11px] text-slate-500 max-w-sm mx-auto">Post your job openings with required skills, and our Australian talent matcher will automatically shortlist top qualified candidates for your review.</p>
+                  <a href="{{ url_for('post_job') }}" class="inline-block mt-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-[11px] font-semibold transition-all">
+                    Post a Job to Activate AI Matching
+                  </a>
+                </div>
+              {% endif %}
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ================= RIGHT COLUMN (5 of 12) ================= -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- Card: Hiring Progress Bar Chart -->
+          <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-xl space-y-4">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 class="font-bold text-white text-xs flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-[#2BE0BE]"></i>
+                Hiring Progress
+              </h3>
+              <div class="flex items-center gap-1 text-[11px] text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                <span>Last 30 days</span>
+                <i data-lucide="chevron-down" class="w-3 h-3"></i>
+              </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex items-center justify-between text-[10px] text-slate-300 flex-wrap gap-2">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Applications</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500"></span>Screened</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Interviews</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#2BE0BE]"></span>Hired</span>
+            </div>
+
+            <!-- SVG Bar Chart Visualization -->
+            <div class="h-40 w-full pt-2">
+              <svg class="w-full h-full" viewBox="0 0 280 120" fill="none">
+                <!-- Grid Lines -->
+                <line x1="0" y1="20" x2="280" y2="20" stroke="#ffffff" stroke-opacity="0.05" stroke-dasharray="2 2"/>
+                <line x1="0" y1="50" x2="280" y2="50" stroke="#ffffff" stroke-opacity="0.05" stroke-dasharray="2 2"/>
+                <line x1="0" y1="80" x2="280" y2="80" stroke="#ffffff" stroke-opacity="0.05" stroke-dasharray="2 2"/>
+                <line x1="0" y1="100" x2="280" y2="100" stroke="#ffffff" stroke-opacity="0.1"/>
+
+                <!-- Group 1: Sep 15 -->
+                <rect x="20" y="40" width="5" height="60" fill="#3b82f6" rx="1.5"/>
+                <rect x="27" y="55" width="5" height="45" fill="#a855f7" rx="1.5"/>
+                <rect x="34" y="70" width="5" height="30" fill="#f59e0b" rx="1.5"/>
+                <rect x="41" y="85" width="5" height="15" fill="#2be0be" rx="1.5"/>
+                <text x="33" y="114" fill="#94a3b8" font-size="8" text-anchor="middle">Sep 15</text>
+
+                <!-- Group 2: Sep 22 -->
+                <rect x="75" y="30" width="5" height="70" fill="#3b82f6" rx="1.5"/>
+                <rect x="82" y="48" width="5" height="52" fill="#a855f7" rx="1.5"/>
+                <rect x="89" y="65" width="5" height="35" fill="#f59e0b" rx="1.5"/>
+                <rect x="96" y="80" width="5" height="20" fill="#2be0be" rx="1.5"/>
+                <text x="88" y="114" fill="#94a3b8" font-size="8" text-anchor="middle">Sep 22</text>
+
+                <!-- Group 3: Sep 29 -->
+                <rect x="130" y="20" width="5" height="80" fill="#3b82f6" rx="1.5"/>
+                <rect x="137" y="38" width="5" height="62" fill="#a855f7" rx="1.5"/>
+                <rect x="144" y="55" width="5" height="45" fill="#f59e0b" rx="1.5"/>
+                <rect x="151" y="75" width="5" height="25" fill="#2be0be" rx="1.5"/>
+                <text x="143" y="114" fill="#94a3b8" font-size="8" text-anchor="middle">Sep 29</text>
+
+                <!-- Group 4: Oct 6 -->
+                <rect x="185" y="15" width="5" height="85" fill="#3b82f6" rx="1.5"/>
+                <rect x="192" y="32" width="5" height="68" fill="#a855f7" rx="1.5"/>
+                <rect x="199" y="50" width="5" height="50" fill="#f59e0b" rx="1.5"/>
+                <rect x="206" y="70" width="5" height="30" fill="#2be0be" rx="1.5"/>
+                <text x="198" y="114" fill="#94a3b8" font-size="8" text-anchor="middle">Oct 6</text>
+
+                <!-- Group 5: Oct 13 -->
+                <rect x="240" y="10" width="5" height="90" fill="#3b82f6" rx="1.5"/>
+                <rect x="247" y="25" width="5" height="75" fill="#a855f7" rx="1.5"/>
+                <rect x="254" y="45" width="5" height="55" fill="#f59e0b" rx="1.5"/>
+                <rect x="261" y="65" width="5" height="35" fill="#2be0be" rx="1.5"/>
+                <text x="253" y="114" fill="#94a3b8" font-size="8" text-anchor="middle">Oct 13</text>
+              </svg>
+            </div>
+
+          </div>
+
+          <!-- Quick Actions Grid -->
+          <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-xl space-y-3">
+            <h3 class="font-bold text-white text-xs flex items-center gap-2">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              Quick Actions
+            </h3>
+            <div class="grid grid-cols-2 gap-2.5">
+              <a href="{{ url_for('post_job') }}" class="p-2.5 rounded-xl bg-gradient-to-r from-blue-600/30 to-blue-700/20 border border-blue-500/30 hover:border-blue-400 flex items-center gap-2 text-xs font-semibold text-slate-200 hover:text-white transition-all">
+                <i data-lucide="plus" class="w-4 h-4 text-blue-400"></i>
+                <span>Post a New Job</span>
+              </a>
+              <a href="{{ url_for('jobs') }}" class="p-2.5 rounded-xl bg-gradient-to-r from-purple-600/30 to-purple-700/20 border border-purple-500/30 hover:border-purple-400 flex items-center gap-2 text-xs font-semibold text-slate-200 hover:text-white transition-all">
+                <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+                <span>Search Candidates</span>
+              </a>
+              <a href="{{ url_for('employer_dashboard') }}" class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-all">
+                <i data-lucide="briefcase" class="w-4 h-4 text-slate-400"></i>
+                <span>View Applications</span>
+              </a>
+              <a href="#interviews" class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-all">
+                <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+                <span>Schedule Interview</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Dual Analytics: Diversity & Sources Donuts -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <!-- Diversity & Inclusion Card -->
+            <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-white text-xs">Diversity &amp; Inclusion</h4>
+                <span class="text-[10px] text-blue-400 hover:underline cursor-pointer">View Insights &rarr;</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative w-16 h-16 shrink-0">
+                  <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path class="text-slate-800" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="text-[#2BE0BE]" stroke-dasharray="48, 100" stroke-width="4" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-xs font-extrabold text-white">48%</span>
+                  </div>
+                </div>
+                <div class="text-[10px] space-y-1 text-slate-300">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>Male</span>
+                    <span class="text-slate-400">52%</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span>Female</span>
+                    <span class="text-slate-400">46%</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>Non-binary</span>
+                    <span class="text-slate-400">2%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Candidate Sources Card -->
+            <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-4 backdrop-blur-xl shadow-xl space-y-3">
+              <h4 class="font-bold text-white text-xs">Candidate Sources</h4>
+              <div class="flex items-center gap-3">
+                <div class="relative w-16 h-16 shrink-0">
+                  <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path class="text-slate-800" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="text-blue-500" stroke-dasharray="40, 100" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="text-purple-500" stroke-dasharray="28, 100" stroke-dashoffset="-40" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    <path class="text-amber-500" stroke-dasharray="18, 100" stroke-dashoffset="-68" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  </svg>
+                  <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span class="text-[11px] font-extrabold text-white leading-none">{{ total_apps if total_apps > 0 else 0 }}</span>
+                    <span class="text-[8px] text-slate-400">Total</span>
+                  </div>
+                </div>
+                <div class="text-[10px] space-y-0.5 text-slate-300">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>NEXORA</span>
+                    <span class="text-slate-400">40%</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>LinkedIn</span>
+                    <span class="text-slate-400">28%</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Direct</span>
+                    <span class="text-slate-400">18%</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Referrals</span>
+                    <span class="text-slate-400">10%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Upcoming Interviews List -->
+          <div id="interviews" class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-xl space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 class="font-bold text-white text-xs flex items-center gap-2">
+                <i data-lucide="video" class="w-4 h-4 text-blue-400"></i>
+                Upcoming Interviews
+              </h3>
+              <a href="#interviews" class="text-xs text-blue-400 hover:text-blue-300 font-semibold">View all &rarr;</a>
+            </div>
+
+            <div class="space-y-2.5">
+              <!-- Interview Item 1 -->
+              <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                    AS
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-white truncate">Aarav Sharma</p>
+                    <p class="text-[10px] text-slate-400">16 Oct 2026 &bull; 10:00 AM (AEDT)</p>
+                  </div>
+                </div>
+                <button class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all shrink-0">
+                  Join
+                </button>
+              </div>
+
+              <!-- Interview Item 2 -->
+              <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                    PN
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-white truncate">Priya Nair</p>
+                    <p class="text-[10px] text-slate-400">16 Oct 2026 &bull; 2:00 PM (AEDT)</p>
+                  </div>
+                </div>
+                <button class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all shrink-0">
+                  Join
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Unique Employer Features Grid -->
+          <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-xl shadow-xl space-y-3">
+            <h3 class="font-bold text-white text-xs flex items-center gap-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-purple-400"></i>
+              Unique Employer Features
+            </h3>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 transition-all flex flex-col items-center justify-center gap-1.5">
+                <i data-lucide="target" class="w-4 h-4 text-purple-400"></i>
+                <span class="text-[10px] font-semibold text-slate-200">AI Matching</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 transition-all flex flex-col items-center justify-center gap-1.5">
+                <i data-lucide="calendar-check" class="w-4 h-4 text-blue-400"></i>
+                <span class="text-[10px] font-semibold text-slate-200">Automation</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center gap-1.5">
+                <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+                <span class="text-[10px] font-semibold text-slate-200">Talent Pool</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-amber-500/40 transition-all flex flex-col items-center justify-center gap-1.5">
+                <i data-lucide="trending-up" class="w-4 h-4 text-amber-400"></i>
+                <span class="text-[10px] font-semibold text-slate-200">Market Insights</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-teal-500/40 transition-all flex flex-col items-center justify-center gap-1.5">
+                <i data-lucide="globe" class="w-4 h-4 text-teal-400"></i>
+                <span class="text-[10px] font-semibold text-slate-200">Visa Filters</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-pink-500/40 transition-all flex flex-col items-center justify-center gap-1.5">
+                <i data-lucide="users-2" class="w-4 h-4 text-pink-400"></i>
+                <span class="text-[10px] font-semibold text-slate-200">Collaboration</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+</div>
 {% endblock %}

@@ -1,62 +1,985 @@
-{% extends "auth/_layout.html" %}
-{% from "auth/_macros.html" import flashes, form_error, text_field, country_select, field_error with context %}
-{% block title %}{{ 'Company profile' if editing else 'Set up your company profile' }} — NEXORA{% endblock %}
-{% block stage_art %}{% endblock %}
-{% block wrap_class %}auth-wide{% endblock %}
+{% extends "base.html" %}
+{% block title %}{{ 'Company Profile' if show_overview else 'Complete Your Employer Profile' }} — NEXORA{% endblock %}
 
-{% block card %}
-<h1 class="auth-title">{{ 'Company profile' if editing else 'Set up your company profile' }}</h1>
-<p class="auth-sub">{{ 'Keep your organisation details up to date.' if editing else 'Tell us about your organisation to start hiring.' }}</p>
-{{ flashes() }}
-{{ form_error(errors) }}
+{% block site_header %}{% endblock %}
+{% block site_footer %}{% endblock %}
 
-<form method="post" action="{{ url_for('employer.setup') }}" data-auth-form data-setup-form>
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+{% block content %}
+<div class="min-h-screen bg-[#070C1E] text-slate-100 flex flex-col lg:flex-row antialiased selection:bg-[#2BE0BE] selection:text-[#0B1230]">
 
-  <div class="nx-section"><span class="icon-badge icon-badge-indigo w-8 h-8"><i data-lucide="building-2" class="w-4 h-4"></i></span><h2>Company details</h2></div>
-  <div class="grid sm:grid-cols-2 gap-x-4">
-    {{ text_field('company_name', 'Company name', values.name, errors, placeholder='e.g. Northlane Digital', autocomplete='organization') }}
-    {{ country_select('country', 'Country', values.country, countries, 'name', errors) }}
-  </div>
-  {{ text_field('registered_name', 'Registered business name', values.registered_name, errors, placeholder='e.g. Northlane Digital Pty Ltd') }}
+  <!-- ==================== SIDEBAR NAVIGATION ==================== -->
+  <aside class="w-full lg:w-64 bg-[#091026]/95 border-b lg:border-b-0 lg:border-r border-white/10 shrink-0 flex flex-col justify-between p-4 lg:p-5 sticky top-0 z-40 backdrop-blur-xl lg:h-screen lg:overflow-y-auto">
+    <div class="space-y-6">
+      
+      <!-- Brand Logo -->
+      <a href="{{ url_for('index') }}" class="flex items-center gap-3 px-2 py-1 group">
+        <svg class="w-8 h-8 shrink-0 transition-transform duration-300 group-hover:scale-105" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="17" cy="17" r="16" stroke="#2BE0BE" stroke-width="1.5" opacity="0.9"/>
+          <circle cx="9" cy="22" r="3" fill="#6C5CF5"/>
+          <circle cx="25" cy="12" r="3" fill="#2BE0BE"/>
+          <path d="M9 22 C 14 16, 19 18, 25 12" stroke="#2BE0BE" stroke-width="1.5" stroke-dasharray="1 3.4"/>
+          <circle cx="25" cy="12" r="1.3" fill="#0B1230"/>
+        </svg>
+        <span class="font-display font-extrabold text-xl tracking-wider text-white">NEXORA</span>
+      </a>
 
-  <div class="nx-field" role="radiogroup" aria-labelledby="reg-label">
-    <span class="nx-label" id="reg-label">Are you a registered business? *</span>
-    <div class="nx-radio-row">
-      <label class="nx-radio"><input type="radio" name="is_registered" value="yes" {% if values.is_registered %}checked{% endif %}> Yes</label>
-      <label class="nx-radio"><input type="radio" name="is_registered" value="no" {% if not values.is_registered %}checked{% endif %}> No</label>
+      <!-- Navigation Links -->
+      <nav class="space-y-1 text-sm font-medium">
+        <a href="{{ url_for('employer_dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('post_job') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-slate-400"></i>
+          <span>Post a Job</span>
+        </a>
+        <a href="{{ url_for('employer_dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="briefcase" class="w-4 h-4 text-slate-400"></i>
+          <span>Manage Jobs</span>
+        </a>
+        <a href="{{ url_for('employer_dashboard') }}#applications" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+          <span>Applications</span>
+        </a>
+        <a href="{{ url_for('jobs') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+          <span>Find Candidates</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+          <span>Talent Pools</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+          <span>AI Shortlist</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+          <span>Interviews</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="user-check" class="w-4 h-4 text-slate-400"></i>
+          <span>Team & Access</span>
+        </a>
+        <!-- Active Link: Company Profile -->
+        <a href="{{ url_for('employer.setup') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] font-semibold shadow-lg shadow-blue-500/20">
+          <i data-lucide="building" class="w-4 h-4 text-white"></i>
+          <span>Company Profile</span>
+        </a>
+        <a href="{{ url_for('pricing') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="credit-card" class="w-4 h-4 text-slate-400"></i>
+          <span>Billing & Plans</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
     </div>
-  </div>
 
-  <div data-abn-group {% if not values.is_registered %}hidden{% endif %}>
-    {{ text_field('abn', 'Australian Business Number (ABN)', values.abn, errors, placeholder='e.g. 12 345 678 901', required=false, optional=true, inputmode='numeric', maxlength=14, hint='Add your ABN to help verify your business.') }}
-  </div>
-
-  <div class="nx-section"><span class="icon-badge icon-badge-mint w-8 h-8"><i data-lucide="user-round" class="w-4 h-4"></i></span><h2>Primary contact person</h2></div>
-  <div class="grid sm:grid-cols-2 gap-x-4">
-    {{ text_field('contact_first', 'First name', values.contact_first, errors, placeholder='e.g. John', autocomplete='given-name') }}
-    {{ text_field('contact_last', 'Last name', values.contact_last, errors, placeholder='e.g. Smith', autocomplete='family-name') }}
-  </div>
-
-  <div class="nx-field">
-    <label class="nx-label" for="phone">Contact number *</label>
-    <div class="nx-phone">
-      <div class="nx-select-flag">
-        <img src="https://flagcdn.com/w40/{{ values.phone_country|lower }}.png" alt="" data-flag-for="phone_country" onerror="this.style.display='none'" onload="this.style.display=''">
-        <select class="nx-input" id="phone_country" name="phone_country" data-flag-select aria-label="Country code">
-          {% for c in countries %}<option value="{{ c.code }}" {% if c.code == values.phone_country %}selected{% endif %}>{{ c.name }} (+{{ c.dial }})</option>{% endfor %}
-        </select>
+    <!-- Bottom Promo Card: Go Premium -->
+    <div class="mt-6 p-4 rounded-2xl bg-gradient-to-br from-[#1E1B4B]/80 via-[#131B3F]/70 to-[#0F172A]/90 border border-purple-500/30 text-white relative overflow-hidden group shadow-xl">
+      <div class="absolute -top-10 -right-10 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl"></div>
+      <div class="flex items-center gap-2 text-amber-400 font-bold text-sm mb-2">
+        <i data-lucide="crown" class="w-4 h-4"></i>
+        <span>Go Premium</span>
       </div>
-      <input class="nx-input{% if errors.get('phone') %} is-invalid{% endif %}" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national"
-             value="{{ values.phone }}" placeholder="e.g. 412 345 678" required maxlength="20" aria-describedby="phone-error phone-hint"
-             {% if errors.get('phone') %}aria-invalid="true"{% endif %}>
+      <ul class="text-xs text-slate-300 space-y-1.5 mb-3 font-medium">
+        <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#2BE0BE] shrink-0"></i>More job visibility</li>
+        <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#2BE0BE] shrink-0"></i>AI candidate matching</li>
+        <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#2BE0BE] shrink-0"></i>Advanced hiring tools</li>
+        <li class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-[#2BE0BE] shrink-0"></i>Priority support</li>
+      </ul>
+      <a href="{{ url_for('pricing') }}" class="block w-full text-center py-2 px-3 rounded-xl bg-gradient-to-r from-[#6C5CF5] to-[#2563EB] hover:from-[#5A48EC] hover:to-[#1D4ED8] text-white text-xs font-bold transition-all shadow-md shadow-indigo-500/25">
+        View Plans &rarr;
+      </a>
     </div>
-    {{ field_error(errors, 'phone') }}
-    <p class="nx-hint" id="phone-hint">This is your primary contact and will not be shared with candidates.</p>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top Workspace Header -->
+    <header class="h-16 border-b border-white/10 bg-[#091026]/80 backdrop-blur-xl px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
+      
+      <!-- Search Input -->
+      <div class="relative w-72 md:w-96">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input type="text" placeholder="Search candidates, jobs, or companies..." class="w-full bg-[#121A3A]/70 border border-white/10 rounded-full pl-10 pr-4 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-[#2BE0BE]/60 focus:ring-1 focus:ring-[#2BE0BE]/40 transition-all">
+      </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Location Selector -->
+        <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121A3A]/70 border border-white/10 text-xs text-slate-200">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#2BE0BE]"></i>
+          <span>Australia</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400 ml-0.5"></i>
+        </div>
+
+        <!-- Notification Bell -->
+        <button class="relative p-2 rounded-full hover:bg-white/5 text-slate-300 hover:text-white transition-colors" title="Notifications">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#091026]"></span>
+        </button>
+
+        <!-- Employer User Avatar -->
+        <div class="flex items-center gap-2 pl-2 border-l border-white/10">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6C5CF5] to-[#2BE0BE] flex items-center justify-center text-xs font-bold text-white shadow-md">
+            {{ company.initials if company else 'R' }}
+          </div>
+          <span class="text-xs font-semibold text-slate-200 hidden md:inline truncate max-w-[120px]">
+            {{ company.name if company and company.name else (values.name if values and values.name else 'Employer') }}
+          </span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- Workspace Main Body -->
+    <main class="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+
+      <!-- ==================== SHARED SYDNEY NIGHT SKYLINE BANNER ==================== -->
+      <section class="relative bg-gradient-to-r from-[#0C1530] via-[#101E42] to-[#0A1024] border border-white/10 rounded-3xl p-6 sm:p-8 text-white shadow-2xl overflow-hidden min-h-[170px] flex items-center justify-between">
+        
+        <!-- Background Twilight City Glow -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#070C1E]/80 via-transparent to-transparent z-0 pointer-events-none"></div>
+
+        <!-- Left Heading & Breadcrumb -->
+        <div class="relative z-10 max-w-xl">
+          <p class="text-xs font-medium text-slate-400 mb-2 flex items-center gap-1.5">
+            <span>Employer</span>
+            <span>&rsaquo;</span>
+            {% if show_overview %}
+              <span class="text-[#2BE0BE]">Company Profile</span>
+            {% else %}
+              <span>Register</span>
+              <span>&rsaquo;</span>
+              <span class="text-[#2BE0BE]">Complete Profile</span>
+            {% endif %}
+          </p>
+          <h1 class="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white leading-tight">
+            {% if show_overview %}
+              Company Profile
+            {% else %}
+              Complete Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#2BE0BE] to-[#6C5CF5]">Employer Profile</span>
+            {% endif %}
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-300 mt-2">
+            {% if show_overview %}
+              Manage your company information and hiring preferences.
+            {% else %}
+              Set up your company to start hiring across Australia.
+            {% endif %}
+          </p>
+        </div>
+
+        <!-- Right Side: Sydney Harbour Skyline Illustration & Quote -->
+        <div class="relative z-10 hidden md:flex flex-col items-end justify-center pl-6">
+          <p class="text-xs text-slate-300/80 font-medium tracking-wide text-right">More than a job.</p>
+          <p class="text-xs text-[#2BE0BE] font-semibold tracking-wide text-right mb-2">A future in Australia.</p>
+          
+          <!-- Sydney Opera House & Harbour Bridge Vector Silhouette -->
+          <div class="w-64 h-16 opacity-85">
+            <svg class="w-full h-full" viewBox="0 0 260 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect y="56" width="260" height="14" fill="url(#syd-water)" opacity="0.6"/>
+              <path d="M10 56 C 25 30, 65 30, 80 56" stroke="#475569" stroke-width="2" fill="none"/>
+              <path d="M15 56 C 28 35, 62 35, 75 56" stroke="#334155" stroke-width="1.2" stroke-dasharray="2 2" fill="none"/>
+              <line x1="5" y1="56" x2="85" y2="56" stroke="#64748b" stroke-width="1.5"/>
+              <rect x="86" y="24" width="12" height="32" fill="#1e293b" rx="1"/>
+              <circle cx="92" cy="28" r="1" fill="#facc15"/>
+              <circle cx="92" cy="34" r="1" fill="#38bdf8"/>
+              <rect x="101" y="16" width="16" height="40" fill="#0f172a" rx="1"/>
+              <rect x="105" y="20" width="8" height="2" fill="#fef08a" opacity="0.9"/>
+              <rect x="105" y="26" width="8" height="2" fill="#38bdf8" opacity="0.9"/>
+              <rect x="105" y="32" width="8" height="2" fill="#fef08a" opacity="0.7"/>
+              <rect x="120" y="28" width="14" height="28" fill="#1e293b" rx="1"/>
+              <path d="M142 56 C 145 42, 155 38, 160 56 Z" fill="url(#sail-grad)" stroke="#94a3b8" stroke-width="0.8"/>
+              <path d="M154 56 C 158 36, 172 32, 178 56 Z" fill="url(#sail-grad)" stroke="#cbd5e1" stroke-width="0.8"/>
+              <path d="M172 56 C 176 40, 188 38, 194 56 Z" fill="url(#sail-grad)" stroke="#94a3b8" stroke-width="0.8"/>
+              <path d="M188 56 C 192 46, 202 44, 206 56 Z" fill="url(#sail-grad)" stroke="#64748b" stroke-width="0.8"/>
+              <rect x="215" y="22" width="14" height="34" fill="#1e293b" rx="1"/>
+              <circle cx="222" cy="26" r="1.2" fill="#f43f5e"/>
+              <circle cx="222" cy="32" r="1" fill="#38bdf8"/>
+              <rect x="233" y="30" width="18" height="26" fill="#0f172a" rx="1"/>
+              <line x1="20" y1="60" x2="60" y2="60" stroke="#38bdf8" stroke-width="1" opacity="0.4"/>
+              <line x1="140" y1="62" x2="190" y2="62" stroke="#facc15" stroke-width="1" opacity="0.5"/>
+              <line x1="160" y1="66" x2="220" y2="66" stroke="#2be0be" stroke-width="1" opacity="0.3"/>
+              <defs>
+                <linearGradient id="sail-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f8fafc" stop-opacity="0.95"/>
+                  <stop offset="100%" stop-color="#64748b" stop-opacity="0.8"/>
+                </linearGradient>
+                <linearGradient id="syd-water" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#0284c7" stop-opacity="0.2"/>
+                  <stop offset="50%" stop-color="#6366f1" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#0284c7" stop-opacity="0.2"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== VIEW 1: COMPLETED COMPANY PROFILE OVERVIEW (Image 2 - Right Side) ==================== -->
+      {% if show_overview %}
+      <div id="company-profile-overview" class="space-y-6">
+
+        <!-- Company Header Summary Card -->
+        <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 sm:p-7 backdrop-blur-xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div class="flex items-center gap-5 min-w-0">
+            <!-- Large Logo Box -->
+            <div id="overview-logo-box" class="w-20 h-20 rounded-2xl bg-white border border-white/20 p-2 flex items-center justify-center shrink-0 shadow-lg overflow-hidden">
+              {% if values.logo_url %}
+                <img src="{{ values.logo_url }}" alt="Company Logo" class="w-full h-full object-contain">
+              {% else %}
+                <div class="w-full h-full rounded-xl bg-gradient-to-tr from-[#2563EB] to-[#2BE0BE] flex items-center justify-center text-white font-extrabold text-2xl">
+                  {{ values.name[:2].upper() if values.name else 'NX' }}
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Company Meta Details -->
+            <div class="min-w-0 space-y-1.5">
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{{ values.name or 'Nexora Pty Ltd' }}</h2>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                  Verified
+                </span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-300">{{ values.industry or 'Information Technology (IT)' }}</p>
+              <div class="flex items-center gap-4 text-xs text-slate-400 flex-wrap">
+                <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#2BE0BE]"></i>{{ values.location or 'Sydney, NSW' }}</span>
+                <span class="flex items-center gap-1"><i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>{{ values.company_size or '11 - 50 employees' }}</span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-slate-400 flex-wrap pt-0.5">
+                {% if values.website %}
+                  <a href="{{ values.website }}" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 underline flex items-center gap-1">
+                    {{ values.website }}
+                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                  </a>
+                {% endif %}
+                {% if values.abn %}
+                  <span>ABN {{ values.abn }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit Profile Button -->
+          <a href="{{ url_for('employer.setup', edit=1) }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#6C5CF5] hover:from-[#1D4ED8] hover:to-[#5B4AE3] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all self-start md:self-center shrink-0">
+            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            Edit Profile
+          </a>
+        </div>
+
+        <!-- 2 Column Details Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Left Column: Company Details Card -->
+          <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="building" class="w-4 h-4 text-blue-400"></i>
+                <h3 class="font-bold text-white text-sm">Company Details</h3>
+              </div>
+              <a href="{{ url_for('employer.setup', edit=1) }}#step-1" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium">
+                <i data-lucide="edit-2" class="w-3 h-3"></i>Edit
+              </a>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex justify-between py-1 border-b border-white/5">
+                <span class="text-slate-400">Company Name</span>
+                <span class="text-white font-medium">{{ values.name or 'Nexora Pty Ltd' }}</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-white/5">
+                <span class="text-slate-400">Website</span>
+                <a href="{{ values.website or '#' }}" target="_blank" class="text-blue-400 underline flex items-center gap-1 font-medium">{{ values.website or 'https://www.nexora.com.au' }} <i data-lucide="external-link" class="w-3 h-3"></i></a>
+              </div>
+              <div class="flex justify-between py-1 border-b border-white/5">
+                <span class="text-slate-400">Industry</span>
+                <span class="text-white font-medium">{{ values.industry or 'Information Technology (IT)' }}</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-white/5">
+                <span class="text-slate-400">Company Size</span>
+                <span class="text-white font-medium">{{ values.company_size or '11 - 50 employees' }}</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-white/5">
+                <span class="text-slate-400">Location</span>
+                <span class="text-white font-medium">{{ values.location or 'Sydney, NSW, Australia' }}</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-white/5">
+                <span class="text-slate-400">ABN</span>
+                <span class="text-white font-medium">{{ values.abn or '12 345 678 901' }}</span>
+              </div>
+              <div class="flex items-center justify-between pt-2">
+                <span class="text-slate-400">Company Logo</span>
+                <div class="w-12 h-12 rounded-xl bg-white p-1 flex items-center justify-center overflow-hidden border border-white/10">
+                  {% if values.logo_url %}
+                    <img src="{{ values.logo_url }}" alt="Logo" class="w-full h-full object-contain">
+                  {% else %}
+                    <span class="text-xs font-bold text-slate-800">{{ values.name[:2].upper() if values.name else 'NX' }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Recruiter Contact & Hiring Preferences -->
+          <div class="space-y-6">
+
+            <!-- Recruiter Contact Card -->
+            <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                  <i data-lucide="user" class="w-4 h-4 text-[#2BE0BE]"></i>
+                  <h3 class="font-bold text-white text-sm">Recruiter Contact</h3>
+                </div>
+                <a href="{{ url_for('employer.setup', edit=1) }}#step-2" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium">
+                  <i data-lucide="edit-2" class="w-3 h-3"></i>Edit
+                </a>
+              </div>
+              <div class="space-y-3 text-xs">
+                <div class="flex justify-between py-1 border-b border-white/5">
+                  <span class="text-slate-400">Full Name</span>
+                  <span class="text-white font-medium">{{ values.contact_name or (values.contact_first ~ ' ' ~ values.contact_last)|trim or 'Sarah Mitchell' }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-white/5">
+                  <span class="text-slate-400">Work Email</span>
+                  <span class="text-white font-medium">{{ values.work_email or 'sarah.mitchell@nexora.com.au' }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-white/5">
+                  <span class="text-slate-400">Contact Number</span>
+                  <span class="text-white font-medium flex items-center gap-1.5">
+                    <span class="text-xs">🇦🇺 +61</span>
+                    <span>{{ values.phone or '412 345 678' }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hiring Preferences Card -->
+            <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                  <i data-lucide="sliders" class="w-4 h-4 text-purple-400"></i>
+                  <h3 class="font-bold text-white text-sm">Hiring Preferences</h3>
+                </div>
+                <a href="{{ url_for('employer.setup', edit=1) }}#step-3" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium">
+                  <i data-lucide="edit-2" class="w-3 h-3"></i>Edit
+                </a>
+              </div>
+              <div class="space-y-3 text-xs">
+                <div>
+                  <span class="text-slate-400 block mb-1.5 font-medium">Job Roles</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">Software Engineer</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">Data Analyst</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">DevOps Engineer</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">UI/UX Designer</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 font-semibold">+3 more</span>
+                  </div>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-1.5 font-medium">Preferred Locations</span>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">Sydney, NSW</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">Melbourne, VIC</span>
+                    <span class="px-2.5 py-1 rounded-lg bg-[#14214D] border border-white/10 text-slate-200">Brisbane, QLD</span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <span class="text-slate-400 block mb-1.5 font-medium">Employment Types</span>
+                    <div class="flex flex-wrap gap-1">
+                      <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">Full-time</span>
+                      <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">Contract</span>
+                    </div>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 block mb-1.5 font-medium">Work Arrangements</span>
+                    <div class="flex flex-wrap gap-1">
+                      <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">Hybrid</span>
+                      <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">Remote</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Bottom Row: Profile Completion Gauge & Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          <!-- Profile Completion Card -->
+          <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl flex items-center gap-5 md:col-span-1">
+            <div class="relative w-20 h-20 shrink-0">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <path class="text-slate-800" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="text-[#2BE0BE]" stroke-dasharray="100, 100" stroke-width="3" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-sm font-extrabold text-white">100%</span>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white mb-1">Your profile is complete!</p>
+              <p class="text-[11px] text-slate-300 leading-relaxed">You can now post jobs and start hiring verified talent across Australia.</p>
+            </div>
+          </div>
+
+          <!-- Quick Actions Grid -->
+          <div class="bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-xl md:col-span-2">
+            <h3 class="font-bold text-white text-xs mb-3 flex items-center gap-2">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              Quick Actions
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <a href="{{ url_for('post_job') }}" class="p-3 rounded-xl bg-gradient-to-br from-blue-600/30 to-blue-800/20 border border-blue-500/30 hover:border-blue-400 flex flex-col items-center justify-center text-center gap-2 group transition-all">
+                <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white shadow-md">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-200 group-hover:text-white">Post a Job</span>
+              </a>
+              <a href="{{ url_for('employer_dashboard') }}" class="p-3 rounded-xl bg-gradient-to-br from-purple-600/30 to-purple-800/20 border border-purple-500/30 hover:border-purple-400 flex flex-col items-center justify-center text-center gap-2 group transition-all">
+                <div class="w-8 h-8 rounded-lg bg-purple-500 flex items-center justify-center text-white shadow-md">
+                  <i data-lucide="briefcase" class="w-4 h-4"></i>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-200 group-hover:text-white">Manage Jobs</span>
+              </a>
+              <a href="{{ url_for('jobs') }}" class="p-3 rounded-xl bg-gradient-to-br from-emerald-600/30 to-emerald-800/20 border border-emerald-500/30 hover:border-emerald-400 flex flex-col items-center justify-center text-center gap-2 group transition-all">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white shadow-md">
+                  <i data-lucide="users" class="w-4 h-4"></i>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-200 group-hover:text-white">Find Candidates</span>
+              </a>
+              <a href="{{ url_for('employer_dashboard') }}#applications" class="p-3 rounded-xl bg-gradient-to-br from-amber-600/30 to-amber-800/20 border border-amber-500/30 hover:border-amber-400 flex flex-col items-center justify-center text-center gap-2 group transition-all">
+                <div class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-white shadow-md">
+                  <i data-lucide="file-text" class="w-4 h-4"></i>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-200 group-hover:text-white">View Applications</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ==================== VIEW 2: COMPLETE YOUR EMPLOYER PROFILE WIZARD (Image 2 - Left Side) ==================== -->
+      {% else %}
+      <div id="company-profile-wizard" class="space-y-6">
+
+        <!-- Stepper Bar (4 Steps Matching Reference Image) -->
+        <div class="bg-[#0C142E]/70 border border-white/10 rounded-2xl p-4 backdrop-blur-xl">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-semibold">
+            <!-- Step 1 Tab -->
+            <button type="button" onclick="switchWizardStep(1)" id="step-tab-1" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+              <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">1</span>
+              <span class="truncate">Company Details</span>
+            </button>
+
+            <!-- Step 2 Tab -->
+            <button type="button" onclick="switchWizardStep(2)" id="step-tab-2" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+              <span class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold">2</span>
+              <span class="truncate">Recruiter Contact</span>
+            </button>
+
+            <!-- Step 3 Tab -->
+            <button type="button" onclick="switchWizardStep(3)" id="step-tab-3" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+              <span class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold">3</span>
+              <span class="truncate">Hiring Preferences</span>
+            </button>
+
+            <!-- Step 4 Tab -->
+            <button type="button" onclick="switchWizardStep(4)" id="step-tab-4" class="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5">
+              <span class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold">4</span>
+              <span class="truncate">Review & Complete</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Wrapper -->
+        <form method="post" action="{{ url_for('employer.setup') }}" id="employer-profile-form" class="space-y-6">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+          <input type="hidden" name="country" value="AU">
+          <input type="hidden" name="is_registered" value="yes">
+          <input type="hidden" name="logo_url" id="logo_url_input" value="{{ values.logo_url }}">
+
+          <!-- STEP 1: COMPANY DETAILS -->
+          <div id="step-panel-1" class="step-panel bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+            
+            <!-- Section Header -->
+            <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0 font-bold">
+                <i data-lucide="building" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  Company Details
+                  <span class="text-xs text-blue-400 font-semibold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">Step 1 of 4</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Tell us about your company. This information will be visible to candidates.</p>
+              </div>
+            </div>
+
+            <!-- Form Fields Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Company Name -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span>Company Name *</span>
+                  {% if errors.company_name %}<span class="text-rose-400 text-[11px]">{{ errors.company_name }}</span>{% endif %}
+                </label>
+                <input type="text" name="company_name" id="f_company_name" value="{{ values.name }}" placeholder="e.g. Nexora Pty Ltd" required class="w-full bg-[#121A3A]/80 border {% if errors.company_name %}border-rose-500{% else %}border-white/10{% endif %} rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2BE0BE] focus:ring-1 focus:ring-[#2BE0BE] transition-all">
+              </div>
+
+              <!-- Website -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Website *</label>
+                <input type="url" name="website" id="f_website" value="{{ values.website }}" placeholder="https://www.nexora.com.au" required class="w-full bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2BE0BE] focus:ring-1 focus:ring-[#2BE0BE] transition-all">
+              </div>
+
+              <!-- Industry -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Industry *</label>
+                <select name="industry" id="f_industry" required class="w-full bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#2BE0BE] transition-all">
+                  <option value="Information Technology (IT)" {% if values.industry == 'Information Technology (IT)' %}selected{% endif %}>Information Technology (IT)</option>
+                  <option value="Financial Services & Fintech" {% if values.industry == 'Financial Services & Fintech' %}selected{% endif %}>Financial Services & Fintech</option>
+                  <option value="Healthcare & MedTech" {% if values.industry == 'Healthcare & MedTech' %}selected{% endif %}>Healthcare & MedTech</option>
+                  <option value="Engineering & Construction" {% if values.industry == 'Engineering & Construction' %}selected{% endif %}>Engineering & Construction</option>
+                  <option value="Professional & Legal Services" {% if values.industry == 'Professional & Legal Services' %}selected{% endif %}>Professional & Legal Services</option>
+                  <option value="Education & EdTech" {% if values.industry == 'Education & EdTech' %}selected{% endif %}>Education & EdTech</option>
+                  <option value="Retail & E-Commerce" {% if values.industry == 'Retail & E-Commerce' %}selected{% endif %}>Retail & E-Commerce</option>
+                </select>
+              </div>
+
+              <!-- Company Size -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Company Size *</label>
+                <select name="company_size" id="f_company_size" required class="w-full bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#2BE0BE] transition-all">
+                  <option value="1 - 10 employees" {% if values.company_size == '1 - 10 employees' %}selected{% endif %}>1 - 10 employees</option>
+                  <option value="11 - 50 employees" {% if not values.company_size or values.company_size == '11 - 50 employees' %}selected{% endif %}>11 - 50 employees</option>
+                  <option value="51 - 200 employees" {% if values.company_size == '51 - 200 employees' %}selected{% endif %}>51 - 200 employees</option>
+                  <option value="201 - 500 employees" {% if values.company_size == '201 - 500 employees' %}selected{% endif %}>201 - 500 employees</option>
+                  <option value="500+ employees" {% if values.company_size == '500+ employees' %}selected{% endif %}>500+ employees</option>
+                </select>
+              </div>
+
+              <!-- Location (Australia) -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Location (Australia) *</label>
+                <select name="location" id="f_location" required class="w-full bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#2BE0BE] transition-all">
+                  <option value="Sydney, NSW" {% if not values.location or values.location == 'Sydney, NSW' %}selected{% endif %}>Sydney, NSW</option>
+                  <option value="Melbourne, VIC" {% if values.location == 'Melbourne, VIC' %}selected{% endif %}>Melbourne, VIC</option>
+                  <option value="Brisbane, QLD" {% if values.location == 'Brisbane, QLD' %}selected{% endif %}>Brisbane, QLD</option>
+                  <option value="Perth, WA" {% if values.location == 'Perth, WA' %}selected{% endif %}>Perth, WA</option>
+                  <option value="Adelaide, SA" {% if values.location == 'Adelaide, SA' %}selected{% endif %}>Adelaide, SA</option>
+                  <option value="Canberra, ACT" {% if values.location == 'Canberra, ACT' %}selected{% endif %}>Canberra, ACT</option>
+                  <option value="Gold Coast, QLD" {% if values.location == 'Gold Coast, QLD' %}selected{% endif %}>Gold Coast, QLD</option>
+                  <option value="Australia-wide / Remote" {% if values.location == 'Australia-wide / Remote' %}selected{% endif %}>Australia-wide / Remote</option>
+                </select>
+              </div>
+
+              <!-- ABN (Optional) -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span>ABN (Optional)</span>
+                  {% if errors.abn %}<span class="text-rose-400 text-[11px]">{{ errors.abn }}</span>{% endif %}
+                </label>
+                <input type="text" name="abn" id="f_abn" value="{{ values.abn }}" placeholder="e.g. 12 345 678 901" maxlength="14" class="w-full bg-[#121A3A]/80 border {% if errors.abn %}border-rose-500{% else %}border-white/10{% endif %} rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2BE0BE] transition-all">
+              </div>
+            </div>
+
+            <!-- Company Logo Dropzone -->
+            <div class="space-y-1.5 pt-2">
+              <label class="text-xs font-semibold text-slate-300">Company Logo (Optional)</label>
+              <div class="flex flex-col sm:flex-row items-center gap-4">
+                
+                <!-- Upload Drop Area -->
+                <div onclick="document.getElementById('logo_file_input').click()" class="flex-1 w-full border-2 border-dashed border-white/20 hover:border-[#2BE0BE]/60 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-[#121A3A]/40 hover:bg-[#121A3A]/70 group">
+                  <div class="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform mb-2">
+                    <i data-lucide="cloud-upload" class="w-6 h-6"></i>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-200">Upload Company Logo</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">JPG, PNG (Max 5MB)</p>
+                  <input type="file" id="logo_file_input" accept="image/png,image/jpeg,image/svg+xml" class="hidden" onchange="handleLogoSelect(this)">
+                </div>
+
+                <!-- Preview Box -->
+                <div id="logo-preview-box" class="w-24 h-24 rounded-2xl bg-white border border-white/20 p-2 flex items-center justify-center shadow-lg shrink-0 overflow-hidden">
+                  <div id="logo-preview-content" class="w-full h-full flex items-center justify-center">
+                    {% if values.logo_url %}
+                      <img src="{{ values.logo_url }}" alt="Logo Preview" class="w-full h-full object-contain">
+                    {% else %}
+                      <div class="w-full h-full rounded-xl bg-gradient-to-tr from-[#2563EB] to-[#2BE0BE] flex items-center justify-center text-white font-extrabold text-xl">
+                        {{ values.name[:2].upper() if values.name else 'NX' }}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Footer Buttons for Step 1 -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <button type="button" onclick="saveAndContinueLater()" class="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-all">
+                Save &amp; Continue Later
+              </button>
+              <button type="button" onclick="validateAndAdvanceStep(1)" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all">
+                Next &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- STEP 2: RECRUITER CONTACT -->
+          <div id="step-panel-2" class="step-panel hidden bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+            
+            <!-- Section Header -->
+            <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 font-bold">
+                <i data-lucide="user" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  Recruiter Contact
+                  <span class="text-xs text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Step 2 of 4</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Primary contact for job postings and candidate communication.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Full Name -->
+              <div class="space-y-1.5 md:col-span-2">
+                <label class="text-xs font-semibold text-slate-300">Full Name *</label>
+                <input type="text" name="contact_name" id="f_contact_name" value="{{ values.contact_name }}" placeholder="e.g. Sarah Mitchell" required class="w-full bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2BE0BE] transition-all">
+              </div>
+
+              <!-- Work Email -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Work Email *</label>
+                <input type="email" name="work_email" id="f_work_email" value="{{ values.work_email }}" placeholder="sarah.mitchell@nexora.com.au" required class="w-full bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2BE0BE] transition-all">
+              </div>
+
+              <!-- Contact Number -->
+              <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Contact Number *</label>
+                <div class="flex items-center gap-2">
+                  <div class="px-3 py-2.5 rounded-xl bg-[#121A3A]/80 border border-white/10 text-xs font-semibold text-slate-300 flex items-center gap-1.5 shrink-0">
+                    <span>🇦🇺</span>
+                    <span>+61</span>
+                  </div>
+                  <input type="tel" name="phone" id="f_phone" value="{{ values.phone }}" placeholder="412 345 678" required class="flex-1 bg-[#121A3A]/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#2BE0BE] transition-all">
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Buttons for Step 2 -->
+            <div class="flex items-center justify-between pt-4 border-t border-white/10">
+              <button type="button" onclick="switchWizardStep(1)" class="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-all">
+                &larr; Back
+              </button>
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="saveAndContinueLater()" class="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-all">
+                  Save &amp; Continue Later
+                </button>
+                <button type="button" onclick="validateAndAdvanceStep(2)" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all">
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3: HIRING PREFERENCES -->
+          <div id="step-panel-3" class="step-panel hidden bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+            
+            <!-- Section Header -->
+            <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0 font-bold">
+                <i data-lucide="sliders" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  Hiring Preferences
+                  <span class="text-xs text-purple-400 font-semibold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">Step 3 of 4</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Tell us about your hiring needs and preferred talent.</p>
+              </div>
+            </div>
+
+            <!-- Job Roles Selection -->
+            <div class="space-y-2">
+              <label class="text-xs font-semibold text-slate-300">Target Job Roles</label>
+              <div class="flex flex-wrap gap-2" id="job-roles-chips">
+                {% for role in ['Software Engineer', 'Data Analyst', 'DevOps Engineer', 'UI/UX Designer', 'Product Manager', 'Cloud Architect', 'Full Stack Developer', 'Python Developer'] %}
+                  <button type="button" onclick="toggleTag(this, 'job_roles')" class="tag-chip px-3 py-1.5 rounded-xl text-xs font-medium border border-white/10 bg-[#121A3A]/70 text-slate-300 hover:border-blue-500 hover:text-white transition-all">
+                    {{ role }}
+                  </button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="job_roles" id="job_roles_input" value="{{ values.job_roles }}">
+            </div>
+
+            <!-- Preferred Locations -->
+            <div class="space-y-2">
+              <label class="text-xs font-semibold text-slate-300">Preferred Australian Hiring Locations</label>
+              <div class="flex flex-wrap gap-2" id="pref-locations-chips">
+                {% for loc in ['Sydney, NSW', 'Melbourne, VIC', 'Brisbane, QLD', 'Perth, WA', 'Adelaide, SA', 'Canberra, ACT', 'Remote Australia'] %}
+                  <button type="button" onclick="toggleTag(this, 'preferred_locations')" class="tag-chip px-3 py-1.5 rounded-xl text-xs font-medium border border-white/10 bg-[#121A3A]/70 text-slate-300 hover:border-emerald-500 hover:text-white transition-all">
+                    {{ loc }}
+                  </button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="preferred_locations" id="preferred_locations_input" value="{{ values.preferred_locations }}">
+            </div>
+
+            <!-- Employment Types & Work Arrangements -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-300">Employment Types</label>
+                <div class="flex flex-wrap gap-2">
+                  {% for t in ['Full-time', 'Part-time', 'Contract', 'Internship'] %}
+                    <button type="button" onclick="toggleTag(this, 'employment_types')" class="tag-chip px-3 py-1.5 rounded-xl text-xs font-medium border border-white/10 bg-[#121A3A]/70 text-slate-300 hover:border-indigo-500 hover:text-white transition-all">
+                      {{ t }}
+                    </button>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="employment_types" id="employment_types_input" value="{{ values.employment_types }}">
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-300">Work Arrangements</label>
+                <div class="flex flex-wrap gap-2">
+                  {% for w in ['On-site', 'Hybrid', 'Remote'] %}
+                    <button type="button" onclick="toggleTag(this, 'work_arrangements')" class="tag-chip px-3 py-1.5 rounded-xl text-xs font-medium border border-white/10 bg-[#121A3A]/70 text-slate-300 hover:border-amber-500 hover:text-white transition-all">
+                      {{ w }}
+                    </button>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="work_arrangements" id="work_arrangements_input" value="{{ values.work_arrangements }}">
+              </div>
+            </div>
+
+            <!-- Footer Buttons for Step 3 -->
+            <div class="flex items-center justify-between pt-4 border-t border-white/10">
+              <button type="button" onclick="switchWizardStep(2)" class="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-all">
+                &larr; Back
+              </button>
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="saveAndContinueLater()" class="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-all">
+                  Save &amp; Continue Later
+                </button>
+                <button type="button" onclick="switchWizardStep(4)" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all">
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4: REVIEW & COMPLETE -->
+          <div id="step-panel-4" class="step-panel hidden bg-[#0C142E]/80 border border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
+            
+            <!-- Section Header -->
+            <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+              <div class="w-10 h-10 rounded-xl bg-[#2BE0BE]/20 border border-[#2BE0BE]/40 flex items-center justify-center text-[#2BE0BE] shrink-0 font-bold">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  Review &amp; Complete
+                  <span class="text-xs text-[#2BE0BE] font-semibold px-2 py-0.5 rounded bg-[#2BE0BE]/10 border border-[#2BE0BE]/20">Step 4 of 4</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-0.5">Review your details and submit to complete your profile.</p>
+              </div>
+            </div>
+
+            <!-- Review Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                <p class="text-xs text-slate-400 font-semibold flex items-center justify-between">
+                  <span>Company Details</span>
+                  <button type="button" onclick="switchWizardStep(1)" class="text-blue-400 hover:underline">Edit</button>
+                </p>
+                <p id="rev-company-name" class="text-sm font-bold text-white truncate">-</p>
+                <p id="rev-industry" class="text-xs text-slate-300">-</p>
+                <p id="rev-location" class="text-xs text-slate-400">-</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                <p class="text-xs text-slate-400 font-semibold flex items-center justify-between">
+                  <span>Recruiter Contact</span>
+                  <button type="button" onclick="switchWizardStep(2)" class="text-blue-400 hover:underline">Edit</button>
+                </p>
+                <p id="rev-contact-name" class="text-sm font-bold text-white truncate">-</p>
+                <p id="rev-email" class="text-xs text-slate-300 truncate">-</p>
+                <p id="rev-phone" class="text-xs text-slate-400">-</p>
+              </div>
+
+              <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                <p class="text-xs text-slate-400 font-semibold flex items-center justify-between">
+                  <span>Hiring Preferences</span>
+                  <button type="button" onclick="switchWizardStep(3)" class="text-blue-400 hover:underline">Edit</button>
+                </p>
+                <p class="text-xs text-emerald-400 font-medium">Configured</p>
+                <p class="text-[11px] text-slate-400">Ready for automated candidate matching across Australia.</p>
+              </div>
+            </div>
+
+            <!-- Agreement Box -->
+            <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-slate-300 flex items-start gap-3">
+              <input type="checkbox" id="terms_agree" required checked class="mt-0.5 rounded border-white/20 bg-[#121A3A] text-blue-600 focus:ring-0">
+              <label for="terms_agree" class="leading-relaxed">
+                I confirm that all company details, Australian Business Number (ABN), and recruiter credentials are accurate and comply with Fair Work Ombudsman and Australian hiring standards.
+              </label>
+            </div>
+
+            <!-- Footer Submit Button -->
+            <div class="flex items-center justify-between pt-4 border-t border-white/10">
+              <button type="button" onclick="switchWizardStep(3)" class="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-all">
+                &larr; Back
+              </button>
+              <button type="submit" class="px-8 py-3 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#2BE0BE] hover:from-[#1D4ED8] hover:to-[#22c55e] text-white text-xs font-extrabold shadow-xl shadow-blue-500/30 transition-all flex items-center gap-2">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                Complete Profile
+              </button>
+            </div>
+          </div>
+
+        </form>
+
+      </div>
+      {% endif %}
+
+    </main>
   </div>
 
-  <button type="submit" class="btn btn-accent btn-block mt-7"><span class="btn-label">{{ 'Save changes' if editing else 'Save and continue' }}</span><i data-lucide="arrow-right" class="w-4 h-4"></i></button>
-  {% if editing %}<p class="auth-foot"><a class="auth-link" href="{{ url_for('employer_dashboard') }}">Cancel</a></p>{% endif %}
-</form>
+</div>
+
+<!-- Client-side Wizard Interactions & Logo Preview Sync -->
+<script>
+function switchWizardStep(stepNum) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.add('hidden'));
+  const target = document.getElementById('step-panel-' + stepNum);
+  if (target) target.classList.remove('hidden');
+
+  for (let i = 1; i <= 4; i++) {
+    const tab = document.getElementById('step-tab-' + i);
+    if (!tab) continue;
+    if (i === stepNum) {
+      tab.className = "flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20";
+    } else {
+      tab.className = "flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-white/5";
+    }
+  }
+
+  if (stepNum === 4) {
+    document.getElementById('rev-company-name').textContent = document.getElementById('f_company_name')?.value || 'Nexora Pty Ltd';
+    document.getElementById('rev-industry').textContent = document.getElementById('f_industry')?.value || 'Information Technology (IT)';
+    document.getElementById('rev-location').textContent = document.getElementById('f_location')?.value || 'Sydney, NSW';
+    document.getElementById('rev-contact-name').textContent = document.getElementById('f_contact_name')?.value || 'Sarah Mitchell';
+    document.getElementById('rev-email').textContent = document.getElementById('f_work_email')?.value || 'recruiter@nexora.com.au';
+    document.getElementById('rev-phone').textContent = '+61 ' + (document.getElementById('f_phone')?.value || '412 345 678');
+  }
+
+  window.scrollTo({ top: 120, behavior: 'smooth' });
+}
+
+function validateAndAdvanceStep(currentStep) {
+  if (currentStep === 1) {
+    const name = document.getElementById('f_company_name')?.value.trim();
+    if (!name || name.length < 2) {
+      alert('Please enter your company name.');
+      document.getElementById('f_company_name')?.focus();
+      return;
+    }
+  } else if (currentStep === 2) {
+    const contact = document.getElementById('f_contact_name')?.value.trim();
+    const email = document.getElementById('f_work_email')?.value.trim();
+    if (!contact) {
+      alert('Please enter the recruiter or contact person name.');
+      document.getElementById('f_contact_name')?.focus();
+      return;
+    }
+    if (!email) {
+      alert('Please enter the work email.');
+      document.getElementById('f_work_email')?.focus();
+      return;
+    }
+  }
+  switchWizardStep(currentStep + 1);
+}
+
+function handleLogoSelect(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const previewBox = document.getElementById('logo-preview-content');
+    if (previewBox) {
+      previewBox.innerHTML = `<img src="${e.target.result}" alt="Logo" class="w-full h-full object-contain">`;
+    }
+    const hiddenInput = document.getElementById('logo_url_input');
+    if (hiddenInput) {
+      hiddenInput.value = e.target.result;
+    }
+    localStorage.setItem('nexora_employer_logo', e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function toggleTag(btn, inputName) {
+  btn.classList.toggle('bg-blue-600');
+  btn.classList.toggle('text-white');
+  btn.classList.toggle('border-blue-500');
+
+  const container = btn.parentElement;
+  const selected = Array.from(container.querySelectorAll('.tag-chip.bg-blue-600')).map(b => b.textContent.trim());
+  const hiddenInput = document.getElementById(inputName + '_input');
+  if (hiddenInput) {
+    hiddenInput.value = selected.join(', ');
+  }
+}
+
+function saveAndContinueLater() {
+  const form = document.getElementById('employer-profile-form');
+  if (form) {
+    const data = {
+      name: document.getElementById('f_company_name')?.value,
+      website: document.getElementById('f_website')?.value,
+      industry: document.getElementById('f_industry')?.value,
+      company_size: document.getElementById('f_company_size')?.value,
+      location: document.getElementById('f_location')?.value,
+      abn: document.getElementById('f_abn')?.value,
+      contact_name: document.getElementById('f_contact_name')?.value,
+      work_email: document.getElementById('f_work_email')?.value,
+      phone: document.getElementById('f_phone')?.value,
+      saved_at: new Date().toISOString()
+    };
+    localStorage.setItem('nexora_employer_draft', JSON.stringify(data));
+    alert('Progress saved! You can resume and complete your company profile anytime.');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const savedLogo = localStorage.getItem('nexora_employer_logo');
+  if (savedLogo && !document.getElementById('logo_url_input')?.value) {
+    const hiddenInput = document.getElementById('logo_url_input');
+    if (hiddenInput) hiddenInput.value = savedLogo;
+    const previewBox = document.getElementById('logo-preview-content');
+    if (previewBox) {
+      previewBox.innerHTML = `<img src="${savedLogo}" alt="Logo" class="w-full h-full object-contain">`;
+    }
+  }
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+});
+</script>
 {% endblock %}

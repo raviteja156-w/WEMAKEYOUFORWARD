@@ -184,20 +184,26 @@ def seeker_dashboard():
 
 
 @app.route("/dashboard/employer")
+@app.route("/employer_dashboard")
 @employer_required
 def employer_dashboard():
     employer = current_employer()
     my_jobs = sorted(data.jobs_for_employer(employer), key=lambda j: j["posted_days_ago"])
     live_jobs = [j for j in my_jobs if j["status"] == "Approved"]
     my_candidates = data.candidates_for_employer(employer)
-    shortlisted = sum(1 for c in my_candidates if c["stage"] in ("Shortlisted", "Interview", "Hired"))
-    recent_applicants = sorted(my_candidates, key=lambda c: c["applied_date"], reverse=True)[:5]
+    shortlisted = sum(1 for c in my_candidates if c.get("stage") in ("Shortlisted", "Interview", "Hired"))
+    interviews = sum(1 for c in my_candidates if c.get("stage") == "Interview")
+    hired = sum(1 for c in my_candidates if c.get("stage") == "Hired")
+    recent_applicants = sorted(my_candidates, key=lambda c: c.get("applied_date", ""), reverse=True)[:5]
     return render_template(
         "employer_dashboard.html", company=current_company(), my_jobs=my_jobs,
         active_jobs=len(live_jobs),
         total_views=sum(j["views"] for j in my_jobs),
         total_apps=sum(j["applications_count"] for j in my_jobs),
-        shortlisted=shortlisted, recent_applicants=recent_applicants)
+        shortlisted=shortlisted,
+        interviews_count=interviews,
+        hired_count=hired,
+        recent_applicants=recent_applicants)
 
 
 @app.route("/post-job")
