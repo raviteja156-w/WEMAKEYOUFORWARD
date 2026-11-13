@@ -65,10 +65,10 @@
               </td>
               <td>
                 <div class="flex gap-1.5 flex-wrap">
-                  <button class="btn btn-outline btn-sm !py-1" onclick="moderate({{ job.id }}, 'approve')">Approve</button>
-                  <button class="btn btn-outline btn-sm !py-1" onclick="moderate({{ job.id }}, 'reject')">Reject</button>
-                  <button class="btn btn-ghost btn-sm !py-1" onclick="moderate({{ job.id }}, 'review')">Review</button>
-                  <button class="btn btn-ghost btn-sm !py-1 text-rose" onclick="moderate({{ job.id }}, 'suspend')">Suspend</button>
+                  <button class="btn btn-outline btn-sm !py-1" data-moderate-id="{{ job.id }}" data-moderate-action="approve">Approve</button>
+                  <button class="btn btn-outline btn-sm !py-1" data-moderate-id="{{ job.id }}" data-moderate-action="reject">Reject</button>
+                  <button class="btn btn-ghost btn-sm !py-1" data-moderate-id="{{ job.id }}" data-moderate-action="review">Review</button>
+                  <button class="btn btn-ghost btn-sm !py-1 text-rose" data-moderate-id="{{ job.id }}" data-moderate-action="suspend">Suspend</button>
                 </div>
               </td>
             </tr>
@@ -84,9 +84,9 @@
             </div>
             <p class="text-xs text-ink/50 mb-3">{{ job.company }}</p>
             <div class="flex gap-1.5 flex-wrap">
-              <button class="btn btn-outline btn-sm !py-1" onclick="moderate({{ job.id }}, 'approve')">Approve</button>
-              <button class="btn btn-outline btn-sm !py-1" onclick="moderate({{ job.id }}, 'reject')">Reject</button>
-              <button class="btn btn-ghost btn-sm !py-1" onclick="moderate({{ job.id }}, 'review')">Review</button>
+              <button class="btn btn-outline btn-sm !py-1" data-moderate-id="{{ job.id }}" data-moderate-action="approve">Approve</button>
+              <button class="btn btn-outline btn-sm !py-1" data-moderate-id="{{ job.id }}" data-moderate-action="reject">Reject</button>
+              <button class="btn btn-ghost btn-sm !py-1" data-moderate-id="{{ job.id }}" data-moderate-action="review">Review</button>
             </div>
           </div>
           {% endfor %}
@@ -101,7 +101,7 @@
           {% for m, v in [('Apr',9200),('May',11400),('Jun',13800),('Jul',15100),('Aug',16700),('Sep',18420)] %}
           <div class="flex-1 flex flex-col items-center gap-2">
             <div class="w-full rounded-t-lg bg-indigo/15 relative flex items-end" style="height:100%">
-              <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo to-mint" style="height:{{ (v/18420*100)|round|int }}%"></div>
+              <div class="w-full rounded-t-lg bg-gradient-to-t from-indigo to-mint" {{ ('style="height:' ~ ((v/18420*100)|round|int) ~ '%"')|safe }}></div>
             </div>
             <span class="text-xs text-ink/40">{{ m }}</span>
           </div>
@@ -119,12 +119,12 @@
           <div class="pb-4 border-b border-grey-line last:border-0 last:pb-0" data-report-row="{{ r.id }}">
             <div class="flex items-center justify-between mb-1">
               <span class="chip">{{ r.type }}</span>
-              <span class="text-xs font-medium {{ 'text-mint' if r.status=='Resolved' else 'text-rose' }}" data-report-status="{{ r.id }}" style="{{ 'color:#0E7A64' if r.status=='Resolved' else '' }}">{{ r.status }}</span>
+              <span class="text-xs font-medium {{ 'text-mint' if r.status=='Resolved' else 'text-rose' }}" data-report-status="{{ r.id }}" {{ ('style="color:#0E7A64"')|safe if r.status=='Resolved' else '' }}>{{ r.status }}</span>
             </div>
             <p class="text-sm text-navy font-medium">{{ r.target }}</p>
             <p class="text-xs text-ink/50 mt-0.5">{{ r.reason }}</p>
             {% if r.status == 'Open' %}
-            <button class="btn btn-outline btn-sm !py-1 mt-2" onclick="resolveReport({{ r.id }})">Mark resolved</button>
+            <button class="btn btn-outline btn-sm !py-1 mt-2" data-resolve-report="{{ r.id }}">Mark resolved</button>
             {% endif %}
           </div>
           {% endfor %}

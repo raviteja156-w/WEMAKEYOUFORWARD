@@ -60,7 +60,7 @@
               {% set action_icon = {'Applied':'file-check-2','Shortlisted':'clock-3','Interview':'calendar-days','Rejected':'file-text'}.get(a.status, 'arrow-up-right') %}
             {% endif %}
             <article class="nx-app-row" data-app-row data-app-id="{{ a.id }}" data-category="{{ category }}" data-status="{{ a.status }}" data-search-text="{{ (a.job.company ~ ' ' ~ a.job.title ~ ' ' ~ display_status ~ ' ' ~ a.job.location)|lower }}">
-              <div class="nx-app-company-mark {% if preview %}nx-logo-{{ a.logo_key }}{% endif %}" {% if not preview %}style="--company-color:{{ a.job.company_color }}"{% endif %} aria-hidden="true">
+              <div class="nx-app-company-mark {% if preview %}nx-logo-{{ a.logo_key }}{% endif %}" {% if not preview %}{{ ('style="--company-color:' ~ a.job.company_color ~ '"')|safe }}{% endif %} aria-hidden="true">
                 {% if preview %}
                   {% if a.logo_key == 'google' %}<span class="nx-logo-google-letter">G</span>{% elif a.logo_key == 'canva' %}<span class="nx-logo-canva-letter">Canva</span>{% elif a.logo_key == 'atlassian' %}<span class="nx-logo-atlassian-mark"></span>{% elif a.logo_key == 'cba' %}<span class="nx-logo-cba-mark"></span>{% elif a.logo_key == 'seek' %}<span class="nx-logo-seek-mark">✣</span>{% elif a.logo_key == 'deloitte' %}<span class="nx-logo-deloitte-letter">D<span>.</span></span>{% elif a.logo_key == 'woolworths' %}<span class="nx-logo-woolworths-mark">w</span>{% else %}{{ a.job.company_initials }}{% endif %}
                 {% else %}{{ a.job.company_initials }}{% endif %}

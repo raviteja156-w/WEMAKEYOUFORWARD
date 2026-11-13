@@ -11,7 +11,7 @@
     <ul class="space-y-3">
       {% for j in saved_jobs %}
       <li class="bg-white rounded-2xl border border-grey-line p-4 md:p-5 flex gap-4">
-        <span class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0" style="background:{{ j.company_color }}">{{ j.company_initials }}</span>
+        <span class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0" {{ ('style="background:' ~ j.company_color ~ '"')|safe }}>{{ j.company_initials }}</span>
         <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
@@ -23,7 +23,7 @@
           <p class="text-xs text-ink/50 mt-2">{{ j.location }} · {{ j.mode }} · {{ salary_label(j) }}</p>
           <div class="flex gap-2 mt-4">
             <a href="{{ url_for('job_details', job_id=j.id) }}" class="btn btn-primary btn-sm">View & Apply</a>
-            <button type="button" class="btn btn-outline btn-sm text-rose" onclick="toggleSave({{ j.id }}, this)">Remove</button>
+            <button type="button" class="btn btn-outline btn-sm text-rose" data-remove-saved="{{ j.id }}">Remove</button>
           </div>
         </div>
       </li>
@@ -54,5 +54,12 @@ async function toggleSave(jobId, btn) {
     console.error(e);
   }
 }
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-remove-saved]');
+  if (btn) {
+    e.preventDefault();
+    toggleSave(btn.getAttribute('data-remove-saved'), btn);
+  }
+});
 </script>
 {% endblock %}

@@ -8,7 +8,7 @@
 
 {% macro acc_head(s, n, color) %}
   <summary>
-    <span class="relative w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0" style="background:{{ color }}22;color:{{ color }}">
+    <span class="relative w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0" {{ ('style="background:' ~ color ~ '22;color:' ~ color ~ '"')|safe }}>
       <i data-lucide="{{ s.icon }}" class="w-[18px] h-[18px]"></i>
       {% if s.done %}<span class="absolute -right-1 -bottom-1 w-4 h-4 rounded-full bg-mint text-[#04122A] inline-flex items-center justify-center ring-2 ring-[#0D1533]"><i data-lucide="check" class="w-2.5 h-2.5"></i></span>{% endif %}
     </span>
@@ -95,7 +95,7 @@
     <div class="space-y-5 min-w-0">
       {% macro ov_head(icon, title, color, key) %}
       <div class="flex items-center justify-between gap-3 mb-4">
-        <h2 class="nx-h text-[15px] flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl inline-flex items-center justify-center" style="background:{{ color }}22;color:{{ color }}"><i data-lucide="{{ icon }}" class="w-4 h-4"></i></span>{{ title }}</h2>
+        <h2 class="nx-h text-[15px] flex items-center gap-2.5"><span class="w-8 h-8 rounded-xl inline-flex items-center justify-center" {{ ('style="background:' ~ color ~ '22;color:' ~ color ~ '"')|safe }}><i data-lucide="{{ icon }}" class="w-4 h-4"></i></span>{{ title }}</h2>
         <a href="{{ url_for('seeker.profile', edit=key) }}" class="nx-link text-xs"><i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit</a>
       </div>
       {% endmacro %}

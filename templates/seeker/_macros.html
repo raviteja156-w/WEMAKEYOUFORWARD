@@ -1,14 +1,15 @@
 {# Shared pieces for the job-seeker portal. Import with: {% from "seeker/_macros.html" import ... with context %} #}
+{% macro css_style(val) %}{{ ('style="' ~ val ~ '"')|safe }}{% endmacro %}
 
 {% macro ring(percent, size=64, stroke=7) %}
   {% set r = (size - stroke) / 2 %}
   {% set c = 2 * 3.14159265 * r %}
-  <span class="relative inline-flex items-center justify-center shrink-0" style="width:{{ size }}px;height:{{ size }}px" role="img" aria-label="{{ percent }} percent complete">
+  <span class="relative inline-flex items-center justify-center shrink-0" {{ css_style('width:' ~ size ~ 'px;height:' ~ size ~ 'px') }} role="img" aria-label="{{ percent }} percent complete">
     <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}" style="transform:rotate(-90deg)" aria-hidden="true">
       <circle cx="{{ size / 2 }}" cy="{{ size / 2 }}" r="{{ r }}" fill="none" stroke="#CDEBDD" stroke-width="{{ stroke }}"/>
       <circle cx="{{ size / 2 }}" cy="{{ size / 2 }}" r="{{ r }}" fill="none" stroke="#0E9D6B" stroke-width="{{ stroke }}" stroke-linecap="round" stroke-dasharray="{{ (c * percent / 100)|round(2) }} {{ c|round(2) }}"/>
     </svg>
-    <span class="absolute font-display font-bold text-navy" style="font-size:{{ (size * 0.26)|round|int }}px">{{ percent }}%</span>
+    <span class="absolute font-display font-bold text-navy" {{ css_style('font-size:' ~ ((size * 0.26)|round|int) ~ 'px') }}>{{ percent }}%</span>
   </span>
 {% endmacro %}
 

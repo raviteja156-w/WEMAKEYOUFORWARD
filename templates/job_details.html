@@ -10,7 +10,7 @@
       <!-- Header card -->
       <div class="card p-6 md:p-8 mb-6">
         <div class="flex items-start gap-4">
-          <span class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold shrink-0" style="background:{{ job.company_color }}">{{ job.company_initials }}</span>
+          <span class="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold shrink-0" {{ ('style="background:' ~ job.company_color ~ '"')|safe }}>{{ job.company_initials }}</span>
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap gap-1.5 mb-2">
               {% if job.featured %}<span class="chip chip-indigo">Featured</span>{% endif %}
@@ -29,7 +29,7 @@
         <div class="flex items-center justify-between mt-6 pt-6 border-t border-grey-line flex-wrap gap-4">
           <p class="font-display text-xl font-bold text-navy">{{ salary_label(job) }} <span class="text-sm font-normal text-ink/40">/ year</span></p>
           <div class="flex gap-2">
-            <button data-save-btn="{{ job.id }}" class="btn btn-outline {{ 'is-saved' if is_saved else '' }}" onclick="toggleSaveJob({{ job.id }}, this)">
+            <button data-save-btn="{{ job.id }}" class="btn btn-outline {{ 'is-saved' if is_saved else '' }}">
               <i data-lucide="bookmark" class="w-4 h-4" {{ "fill='currentColor'" if is_saved else '' }}></i><span data-save-label>{{ 'Saved' if is_saved else 'Save Job' }}</span>
             </button>
             {% if demo_role == 'employer' %}
@@ -90,7 +90,7 @@
           {% if seeker_user %}<span class="text-sm font-bold text-navy">{{ profile_percent }}%</span>{% endif %}
         </div>
         {% if seeker_user %}
-        <div class="progress-track mb-3"><div class="progress-fill" style="width:{{ profile_percent }}%"></div></div>
+        <div class="progress-track mb-3"><div class="progress-fill" {{ ('style="width:' ~ profile_percent ~ '%"')|safe }}></div></div>
         <p class="text-xs text-ink/50">Your profile is {{ profile_percent }}% complete. <a class="auth-link" href="{{ url_for('seeker.profile') }}">Finish your profile</a> for a stronger application.</p>
         {% else %}
         <p class="text-xs text-ink/50"><a class="auth-link" href="{{ url_for('seeker.login', next=request.path) }}">Log in</a> or <a class="auth-link" href="{{ url_for('seeker.register') }}">create an account</a> to apply and see how ready your profile is.</p>
@@ -102,7 +102,7 @@
         <div class="flex flex-col gap-3">
           {% for s in similar %}
           <a href="{{ url_for('job_details', job_id=s.id) }}" class="flex items-start gap-3 group">
-            <span class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0" style="background:{{ s.company_color }}">{{ s.company_initials }}</span>
+            <span class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0" {{ ('style="background:' ~ s.company_color ~ '"')|safe }}>{{ s.company_initials }}</span>
             <div class="min-w-0">
               <p class="text-sm font-medium text-navy group-hover:text-indigo truncate">{{ s.title }}</p>
               <p class="text-xs text-ink/50">{{ s.location }}</p>
@@ -143,7 +143,7 @@
     </div>
     <div class="p-6 border-t border-grey-line flex justify-end gap-2">
       <button onclick="closeModal('apply-modal')" class="btn btn-outline">Cancel</button>
-      <button onclick="submitApplication({{ job.id }})" class="btn btn-accent">Submit Application</button>
+      <button id="submit-app-btn" data-job-id="{{ job.id }}" class="btn btn-accent">Submit Application</button>
     </div>
   </div>
 </div>
@@ -151,11 +151,13 @@
 {% endblock %}
 
 {% block scripts %}
+<script id="job-meta" type="application/json">{"company": {{ job.company|tojson }}, "appsUrl": {{ url_for('seeker.applications')|tojson }}}</script>
 <script>
 async function submitApplication(jobId) {
   const note = document.getElementById('cover-note')?.value || '';
   const result = await seekerPost(`/api/jobs/${jobId}/apply`, { cover_note: note });
   if (!result) return;
+  const meta = JSON.parse(document.getElementById('job-meta')?.textContent || '{}');
   const body = document.getElementById('apply-modal-body');
   body.innerHTML = `
     <div class="p-12 text-center">
@@ -163,13 +165,26 @@ async function submitApplication(jobId) {
         <i data-lucide="check-circle-2" class="w-7 h-7" style="color:#0E7A64"></i>
       </div>
       <h3 class="font-display font-semibold text-lg text-navy">Application submitted</h3>
-      <p class="text-sm text-ink/60 mt-1.5 max-w-xs mx-auto">{{ job.company }} will review your application. Track its progress from My Applications.</p>
+      <p class="text-sm text-ink/60 mt-1.5 max-w-xs mx-auto">${meta.company || 'The employer'} will review your application. Track its progress from My Applications.</p>
       <div class="flex justify-center gap-2 mt-6">
         <button onclick="location.reload()" class="btn btn-outline">Close</button>
-        <a href="{{ url_for('seeker.applications') }}" class="btn btn-primary">My Applications</a>
+        <a href="${meta.appsUrl || '/seeker/applications'}" class="btn btn-primary">My Applications</a>
       </div>
     </div>`;
   if (window.lucide) lucide.createIcons();
 }
+
+document.getElementById('submit-app-btn')?.addEventListener('click', function() {
+  submitApplication(this.getAttribute('data-job-id'));
+});
+
+document.addEventListener('click', function(e) {
+  const saveBtn = e.target.closest('[data-save-btn]');
+  if (saveBtn) {
+    e.preventDefault();
+    const jid = saveBtn.getAttribute('data-save-btn');
+    if (jid && window.toggleSaveJob) window.toggleSaveJob(jid, saveBtn);
+  }
+});
 </script>
 {% endblock %}

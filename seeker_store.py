@@ -1,7 +1,10 @@
 """Supabase-backed seeker accounts, profiles, resumes, applications and saved jobs."""
 import json
+import logging
 from datetime import datetime, timezone
 from db import get_db
+
+log = logging.getLogger(__name__)
 
 APPLICATION_STATUSES = ["Applied", "Shortlisted", "Interview", "Rejected"]
 RESUME_TEMPLATES = [
@@ -17,10 +20,14 @@ PROFILE_SECTIONS=[
  {"key":"additional","label":"Additional Details","weight":10,"icon":"list-plus"}]
 _JSON_COLS=("education","experience","skills","interests")
 def _one(table, **filters):
- q=get_db().table(table).select("*")
- for k,v in filters.items(): q=q.eq(k,v)
- rows=q.limit(1).execute().data or []
- return rows[0] if rows else None
+ try:
+  q=get_db().table(table).select("*")
+  for k,v in filters.items(): q=q.eq(k,v)
+  rows=q.limit(1).execute().data or []
+  return rows[0] if rows else None
+ except Exception as exc:
+  log.warning("Supabase query on %s failed: %s", table, exc)
+  return None
 def _now(): return datetime.now(timezone.utc).isoformat()
 def get_seeker(seeker_id): return _one("seekers",id=seeker_id) if seeker_id else None
 def get_seeker_by_email(email): return _one("seekers",email=(email or "").lower())
@@ -38,10 +45,14 @@ def seeker_display(row):
  name=(row["full_name"] or "").strip() or row["email"].split("@")[0]; parts=[p for p in name.split() if p]
  return {"id":row["id"],"email":row["email"],"full_name":name,"first_name":parts[0] if parts else name,"initials":("".join(p[0] for p in parts[:2]) or name[:1]).upper(),"plan":row["plan"],"is_premium":row["plan"]=="premium"}
 def get_profile(seeker_id):
- row=_one("seeker_profiles",seeker_id=seeker_id)
- if row is None:
-  get_db().table("seeker_profiles").upsert({"seeker_id":seeker_id},on_conflict="seeker_id").execute(); row=_one("seeker_profiles",seeker_id=seeker_id)
- p=dict(row)
+ try:
+  row=_one("seeker_profiles",seeker_id=seeker_id)
+  if row is None:
+   get_db().table("seeker_profiles").upsert({"seeker_id":seeker_id},on_conflict="seeker_id").execute(); row=_one("seeker_profiles",seeker_id=seeker_id)
+ except Exception as exc:
+  log.warning("get_profile db error for %s: %s", seeker_id, exc)
+  row = None
+ p=dict(row or {"seeker_id": seeker_id, "headline": "", "phone": "", "location": "", "education": [], "experience": [], "skills": [], "interests": [], "work_rights": "", "pref_job_type": "", "pref_work_mode": "", "pref_location": ""})
  for col in _JSON_COLS:
   val=p.get(col,[])
   if isinstance(val,str):

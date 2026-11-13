@@ -3,13 +3,16 @@ Job-seeker portal: dashboard data, My Profile, My Applications, Resume Builder,
 Job Matches, Upgrade Plan, and the JSON APIs behind Save / Apply.
 """
 import os
+import re
 from datetime import date
 from urllib.parse import urlparse
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 import data
+import groq_service
 import matching
+import pypdf
 import seeker_store as store
 import validators as v
 from seeker_auth import bp, current_seeker, seeker_required
@@ -35,13 +38,13 @@ def portal_context():
     percent, sections = store.profile_completion(row, profile)
     applied = store.applied_job_ids(row["id"])
     ranked = matching.rank_jobs(data.all_jobs(), profile, resume, applied)
-    visible, locked = matching.split_by_plan(ranked, row["plan"] == "premium")
+    visible, locked = matching.split_by_plan(ranked, row.get("plan", "free") == "premium")
     return {
         "row": row, "profile": profile, "resume": resume,
         "percent": percent, "sections": sections,
         "resume_status": store.resume_status(row, profile, resume),
         "matches": visible, "locked_count": locked, "total_matches": len(ranked),
-        "is_premium": row["plan"] == "premium",
+        "is_premium": row.get("plan", "free") == "premium",
     }
 
 
@@ -298,22 +301,218 @@ def saved():
 
 
 # --------------------------------------------------- Interview Practice --
+_interview_plan_cache = {}
+
+
+def get_cached_plan(seeker_id):
+    return _interview_plan_cache.get(seeker_id)
+
+
+def set_cached_plan(seeker_id, plan):
+    _interview_plan_cache[seeker_id] = plan
+
+
 @bp.get("/interview-practice")
+@bp.get("/interview")
 @seeker_required
 def interview_practice():
     ctx = portal_context()
-    return render_template("seeker/interview_practice.html", **ctx)
+    sid = ctx["row"]["id"]
+    plan = get_cached_plan(sid)
+    if not plan:
+        target_role = ctx["profile"].get("headline") or "Full-Stack Software Engineer"
+        plan = groq_service.generate_interview_roadmap(target_role, "Modern cloud software development", "Distributed systems, Python, React", 7)
+        set_cached_plan(sid, plan)
+    return render_template("seeker/interview_practice.html", **ctx, plan=plan)
 
 
 # ----------------------------------------------------------- Job Alerts --
+def matching_alerts_for_seeker(seeker_id):
+    """Find live jobs matching the seeker's target role, skills, or alert preferences."""
+    profile = store.get_profile(seeker_id)
+    if not profile:
+        return []
+    headline_words = [w.lower() for w in re.findall(r"[a-z0-9+#]+", profile.get("headline", "")) if len(w) > 2]
+    user_skills = {s.lower() for s in (profile.get("skills", []) + profile.get("interests", []))}
+    pref_loc = (profile.get("pref_location") or profile.get("location") or "").lower()
+
+    matches = []
+    for job in data.live_jobs():
+        title_lower = job.get("title", "").lower()
+        job_tags = {t.lower() for t in job.get("tags", [])}
+        job_loc = job.get("location", "").lower()
+
+        title_matched = any(hw in title_lower for hw in headline_words)
+        skill_overlap = list(user_skills & job_tags)
+        loc_matched = (pref_loc in job_loc) or ("remote" in job.get("mode", "").lower()) or (not pref_loc)
+
+        if (title_matched or len(skill_overlap) >= 1) and loc_matched:
+            reason = f"Matches your target role '{profile.get('headline')}'" if title_matched else f"Matches your skills ({', '.join(skill_overlap[:2])})"
+            matches.append({"job": job, "reason": reason})
+
+    return matches[:4]
+
+
 @bp.get("/alerts")
 @seeker_required
 def alerts():
     ctx = portal_context()
-    return render_template("seeker/alerts.html", **ctx, locations=data.LOCATIONS, industries=data.INDUSTRIES)
+    matching_alerts = matching_alerts_for_seeker(ctx["row"]["id"])
+    return render_template("seeker/alerts.html", **ctx, locations=data.LOCATIONS, industries=data.INDUSTRIES, matching_alerts=matching_alerts)
 
 
 # ------------------------------------------------------------ JSON APIs --
+@api_bp.post("/api/seeker/resume/analyze")
+@seeker_required
+def api_resume_analyze():
+    target_role = (request.form.get("target_role") or "").strip()
+    resume_text = (request.form.get("resume_text") or "").strip()
+
+    file = request.files.get("resume_file")
+    if file and file.filename:
+        filename = file.filename.lower()
+        if filename.endswith(".pdf"):
+            try:
+                reader = pypdf.PdfReader(file.stream)
+                extracted = "".join(page.extract_text() or "" for page in reader.pages)
+                if extracted.strip():
+                    resume_text = extracted.strip()
+            except Exception as e:
+                return jsonify({"ok": False, "error": f"Failed to parse PDF: {str(e)}"}), 400
+        elif filename.endswith((".txt", ".md")):
+            try:
+                resume_text = file.read().decode("utf-8", errors="ignore").strip()
+            except Exception as e:
+                return jsonify({"ok": False, "error": f"Failed to read file: {str(e)}"}), 400
+
+    if not resume_text:
+        return jsonify({"ok": False, "error": "Please upload a resume file or paste resume text."}), 400
+
+    row = current_seeker()
+    profile = store.get_profile(row["id"])
+    target_role = target_role or profile.get("headline") or "Software Engineer"
+
+    report = groq_service.analyze_resume_ats(resume_text, target_role)
+    return jsonify({"ok": True, "report": report, "resume_text": resume_text})
+
+
+@api_bp.post("/api/seeker/resume/optimize-ats")
+@seeker_required
+def api_resume_optimize():
+    data_payload = request.get_json(silent=True) or request.form
+    resume_text = (data_payload.get("resume_text") or "").strip()
+    target_role = (data_payload.get("target_role") or "").strip()
+
+    if not resume_text:
+        return jsonify({"ok": False, "error": "Resume text is required."}), 400
+
+    row = current_seeker()
+    profile = store.get_profile(row["id"])
+    user_info = {
+        "full_name": row["full_name"],
+        "email": row["email"],
+        "location": profile.get("location") or "Australia"
+    }
+    target_role = target_role or profile.get("headline") or "Senior Software Engineer"
+
+    optimized = groq_service.generate_92_ats_resume(resume_text, target_role, user_info)
+    return jsonify({"ok": True, "optimized": optimized})
+
+
+@api_bp.post("/api/seeker/resume/apply-to-profile")
+@seeker_required
+def api_resume_apply_to_profile():
+    data_payload = request.get_json(silent=True) or {}
+    summary = (data_payload.get("summary") or "").strip()
+    skills = data_payload.get("skills") or []
+    headline = (data_payload.get("headline") or "").strip()
+
+    row = current_seeker()
+    if summary:
+        store.save_resume(row["id"], "modern", summary[:600])
+
+    fields = {}
+    if headline:
+        fields["headline"] = headline[:80]
+    if skills:
+        fields["skills"] = [str(s).strip() for s in skills if str(s).strip()][:30]
+
+    if fields:
+        store.save_profile_fields(row["id"], **fields)
+
+    return jsonify({"ok": True, "message": "Resume and profile updated with 92% ATS optimization."})
+
+
+@api_bp.post("/api/seeker/interview/generate")
+@seeker_required
+def api_interview_generate():
+    data_payload = request.get_json(silent=True) or request.form
+    job_role = (data_payload.get("job_role") or "").strip()
+    job_description = (data_payload.get("job_description") or "").strip()
+    company_requirements = (data_payload.get("company_requirements") or "").strip()
+    target_days = int(data_payload.get("target_days") or 7)
+
+    if not job_role:
+        return jsonify({"ok": False, "error": "Job role is required."}), 400
+
+    row = current_seeker()
+    # Auto-save role to user profile
+    store.save_profile_fields(row["id"], headline=job_role[:80])
+
+    # Extract common skills and update profile skills
+    existing_profile = store.get_profile(row["id"])
+    existing_skills = existing_profile.get("skills", [])
+    extracted_words = re.findall(r"\b[A-Za-z0-9+#\.\-]{2,20}\b", f"{job_role} {company_requirements}")
+    common_tech = {"python", "javascript", "typescript", "react", "flask", "django", "node", "sql", "postgresql",
+                   "aws", "docker", "kubernetes", "git", "ci/cd", "rest", "api", "graphql", "cloud", "agile", "golang", "java", "c++", "c#"}
+    new_skills = [w for w in extracted_words if w.lower() in common_tech and w.lower() not in {s.lower() for s in existing_skills}]
+    if new_skills:
+        combined_skills = (existing_skills + new_skills)[:25]
+        store.save_profile_fields(row["id"], skills=combined_skills)
+
+    roadmap = groq_service.generate_interview_roadmap(job_role, job_description, company_requirements, target_days)
+    set_cached_plan(row["id"], roadmap)
+    session["interview_role"] = job_role
+
+    return jsonify({"ok": True, "plan": roadmap})
+
+
+@api_bp.post("/api/seeker/interview/ask")
+@seeker_required
+def api_interview_ask():
+    data_payload = request.get_json(silent=True) or {}
+    topic = (data_payload.get("topic") or "").strip()
+    question = (data_payload.get("question") or "").strip()
+
+    if not question:
+        return jsonify({"ok": False, "error": "Question is required."}), 400
+
+    answer = groq_service.ask_interview_ai(topic or "Technical Interview", question)
+    return jsonify({"ok": True, "answer": answer})
+
+
+@api_bp.post("/api/seeker/alerts/save")
+@seeker_required
+def api_alerts_save():
+    data_payload = request.get_json(silent=True) or request.form
+    keywords = (data_payload.get("keywords") or "").strip()
+    location = (data_payload.get("location") or "").strip()
+    frequency = (data_payload.get("frequency") or "daily").strip()
+
+    row = current_seeker()
+    if keywords:
+        store.save_profile_fields(row["id"], headline=keywords[:80])
+    if location:
+        store.save_profile_fields(row["id"], pref_location=location[:60])
+
+    session["alert_preferences"] = {
+        "keywords": keywords,
+        "location": location,
+        "frequency": frequency
+    }
+    return jsonify({"ok": True, "message": "Alert preferences saved successfully!"})
+
+
 @api_bp.post("/api/jobs/<int:job_id>/save")
 @seeker_required
 def api_toggle_save(job_id):

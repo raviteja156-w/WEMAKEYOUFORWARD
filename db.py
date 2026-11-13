@@ -1,9 +1,12 @@
 """Supabase-only persistence layer. No local SQLite database is created."""
 import os
 import zlib
+import logging
 from functools import lru_cache
 from flask import current_app
 from supabase import create_client, Client
+
+log = logging.getLogger(__name__)
 
 BRAND_COLOURS = ["#5D4FE0", "#2DD9B8", "#0B1230", "#E0975D"]
 
@@ -37,10 +40,14 @@ def init_app(app):
             get_db()
 
 def _one(table, **filters):
-    q = get_db().table(table).select("*")
-    for k, v in filters.items(): q = q.eq(k, v)
-    rows = q.limit(1).execute().data or []
-    return rows[0] if rows else None
+    try:
+        q = get_db().table(table).select("*")
+        for k, v in filters.items(): q = q.eq(k, v)
+        rows = q.limit(1).execute().data or []
+        return rows[0] if rows else None
+    except Exception as exc:
+        log.warning("Supabase query on %s failed: %s", table, exc)
+        return None
 
 def get_employer(employer_id):
     return _one("employers", id=employer_id) if employer_id else None

@@ -34,15 +34,15 @@
           </div>
           <p class="text-xs text-ink/40 mb-3">Applied {{ c.applied_date }}</p>
           <div class="flex flex-wrap gap-1.5">
-            <button class="btn btn-outline btn-sm !py-1.5" onclick="viewProfile({{ c.id|tojson }})">View Profile</button>
+            <button class="btn btn-outline btn-sm !py-1.5" data-view-profile="{{ c.id }}">View Profile</button>
             {% if c.stage == 'New' %}
-            <button class="btn btn-accent btn-sm !py-1.5" onclick="moveStage({{ c.id }}, 'Shortlisted')">Shortlist</button>
+            <button class="btn btn-accent btn-sm !py-1.5" data-move-candidate="{{ c.id }}" data-target-stage="Shortlisted">Shortlist</button>
             {% elif c.stage == 'Shortlisted' %}
-            <button class="btn btn-accent btn-sm !py-1.5" onclick="moveStage({{ c.id }}, 'Interview')">Move to Interview</button>
+            <button class="btn btn-accent btn-sm !py-1.5" data-move-candidate="{{ c.id }}" data-target-stage="Interview">Move to Interview</button>
             {% elif c.stage == 'Interview' %}
-            <button class="btn btn-accent btn-sm !py-1.5" onclick="moveStage({{ c.id }}, 'Hired')">Mark Hired</button>
+            <button class="btn btn-accent btn-sm !py-1.5" data-move-candidate="{{ c.id }}" data-target-stage="Hired">Mark Hired</button>
             {% endif %}
-            <button class="btn btn-ghost btn-sm !py-1.5" onclick="contactCandidate({{ c.name|tojson }})">Contact</button>
+            <button class="btn btn-ghost btn-sm !py-1.5" data-contact-candidate="{{ c.name }}">Contact</button>
           </div>
         </div>
         {% endfor %}
@@ -67,8 +67,17 @@
 
 {% endblock %}
 {% block scripts %}
+<script id="candidates-data" type="application/json">{{ (grouped['New'] + grouped['Shortlisted'] + grouped['Interview'] + grouped['Hired']) | tojson }}</script>
 <script>
-  window.NEXORA_CANDIDATES = {{ (grouped['New'] + grouped['Shortlisted'] + grouped['Interview'] + grouped['Hired']) | tojson }};
+  window.NEXORA_CANDIDATES = JSON.parse(document.getElementById('candidates-data').textContent || '[]');
+  document.addEventListener('click', function(e) {
+    const vp = e.target.closest('[data-view-profile]');
+    if (vp && window.viewProfile) { e.preventDefault(); window.viewProfile(Number(vp.getAttribute('data-view-profile'))); return; }
+    const mc = e.target.closest('[data-move-candidate]');
+    if (mc && window.moveStage) { e.preventDefault(); window.moveStage(Number(mc.getAttribute('data-move-candidate')), mc.getAttribute('data-target-stage')); return; }
+    const cc = e.target.closest('[data-contact-candidate]');
+    if (cc && window.contactCandidate) { e.preventDefault(); window.contactCandidate(cc.getAttribute('data-contact-candidate')); return; }
+  });
 </script>
 <script src="{{ url_for('static', filename='js/employer_applicants.js') }}"></script>
 {% endblock %}

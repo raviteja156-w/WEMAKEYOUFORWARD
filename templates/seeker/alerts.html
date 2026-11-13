@@ -7,25 +7,26 @@
   {{ page_head('bell-ring', 'Job Alerts', 'Get notified when new jobs matching your target title and location are posted.', 'icon-badge-amber') }}
 
   <div class="tint tint-amber p-4 md:p-6 space-y-6">
+    <!-- Configure Alert Preferences -->
     <div class="card p-6">
-      <h2 class="font-display font-semibold text-lg text-navy mb-4">Create a New Job Alert</h2>
-      <form class="space-y-4" onsubmit="event.preventDefault(); window.showToast ? showToast('Alert preferences saved!', {icon:'check'}) : alert('Alert saved!');">
+      <h2 class="font-display font-semibold text-lg text-navy mb-4">Job Alert Configuration</h2>
+      <form id="alert-form" class="space-y-4">
         <div class="grid sm:grid-cols-2 gap-4">
           <div>
-            <label class="text-sm font-medium text-navy block mb-1">Keywords or Title</label>
-            <input type="text" placeholder="e.g. Frontend Developer, Data Analyst" class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5 outline-none focus:border-indigo" value="{{ profile.headline }}">
+            <label class="text-sm font-medium text-navy block mb-1">Keywords or Target Role</label>
+            <input type="text" id="alert-keywords" placeholder="e.g. Frontend Developer, Data Analyst" class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5 outline-none focus:border-indigo" value="{{ profile.headline or '' }}">
           </div>
           <div>
             <label class="text-sm font-medium text-navy block mb-1">Preferred Location</label>
-            <select class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5">
+            <select id="alert-location" class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5">
               {% for loc in locations %}
-              <option value="{{ loc }}" {% if profile.location == loc %}selected{% endif %}>{{ loc }}</option>
+              <option value="{{ loc }}" {% if profile.location == loc or profile.pref_location == loc %}selected{% endif %}>{{ loc }}</option>
               {% endfor %}
             </select>
           </div>
           <div>
             <label class="text-sm font-medium text-navy block mb-1">Industry</label>
-            <select class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5">
+            <select id="alert-industry" class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5">
               {% for ind in industries %}
               <option value="{{ ind }}">{{ ind }}</option>
               {% endfor %}
@@ -33,27 +34,55 @@
           </div>
           <div>
             <label class="text-sm font-medium text-navy block mb-1">Notification Frequency</label>
-            <select class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5">
-              <option value="daily">Daily digest (Recommended)</option>
+            <select id="alert-freq" class="w-full text-sm border border-grey-line rounded-xl px-3 py-2.5">
+              <option value="daily">Daily digest on Dashboard (Recommended)</option>
               <option value="instant">Instant notifications</option>
               <option value="weekly">Weekly summary</option>
             </select>
           </div>
         </div>
-        <div class="pt-2 flex justify-end">
-          <button type="submit" class="btn btn-primary btn-sm">Save Alert Preferences</button>
+        <div class="pt-2 flex justify-between items-center">
+          <p class="text-xs text-ink/60">Matching alerts automatically appear at the top of your Seeker Dashboard.</p>
+          <button type="submit" id="btn-save-alert" class="btn btn-primary btn-sm">Save Alert Preferences</button>
         </div>
       </form>
     </div>
 
+    <!-- Active Matched Jobs Triggered by Alerts -->
+    {% if matching_alerts %}
     <div class="card p-6">
-      <h3 class="font-display font-semibold text-navy mb-3">Active Alerts</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display font-semibold text-navy flex items-center gap-2">
+          <span>🔔</span> Active Job Alert Notifications ({{ matching_alerts|length }})
+        </h3>
+        <span class="chip chip-mint text-xs">Live Matches</span>
+      </div>
+      <ul class="space-y-3">
+        {% for m in matching_alerts %}
+        <li class="p-3.5 rounded-xl border border-grey-line bg-white flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0" {{ ('style="background:' ~ m.job.company_color ~ '"')|safe }}>{{ m.job.company_initials }}</span>
+            <div class="min-w-0">
+              <a href="{{ url_for('job_details', job_id=m.job.id) }}" class="font-bold text-navy hover:text-indigo text-sm block truncate">{{ m.job.title }}</a>
+              <p class="text-xs text-ink/60">{{ m.job.company }} · {{ m.job.location }} · {{ m.reason }}</p>
+            </div>
+          </div>
+          <a href="{{ url_for('job_details', job_id=m.job.id) }}" class="btn btn-soft btn-sm shrink-0">View Role</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Active Alerts Profile Badge -->
+    <div class="card p-6">
+      <h3 class="font-display font-semibold text-navy mb-3">Saved Alert Criteria</h3>
       <div class="flex items-center justify-between p-4 bg-white/70 border border-grey-line rounded-xl">
         <div class="flex items-center gap-3">
           <span class="icon-badge icon-badge-mint w-9 h-9"><i data-lucide="bell" class="w-4 h-4"></i></span>
           <div>
-            <p class="font-medium text-sm text-navy">{{ profile.headline or 'General Tech Roles' }}</p>
-            <p class="text-xs text-ink/50">{{ profile.location or 'All Australia' }} · Daily alert</p>
+            <p class="font-medium text-sm text-navy" id="display-headline">{{ profile.headline or 'General Tech Roles' }}</p>
+            <p class="text-xs text-ink/50" id="display-loc">{{ profile.pref_location or profile.location or 'All Australia' }} · Daily Dashboard Digest</p>
           </div>
         </div>
         <span class="chip chip-mint text-xs">Active</span>
@@ -61,4 +90,40 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('alert-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const kw = document.getElementById('alert-keywords').value.trim();
+    const loc = document.getElementById('alert-location').value;
+    const freq = document.getElementById('alert-freq').value;
+
+    const btn = document.getElementById('btn-save-alert');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const res = await fetch('/api/seeker/alerts/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords: kw, location: loc, frequency: freq })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        document.getElementById('display-headline').textContent = kw || 'General Roles';
+        document.getElementById('display-loc').textContent = `${loc} · ${freq} alert`;
+        alert("Alert preferences saved! Matching job alerts will appear on your Seeker Dashboard.");
+      } else {
+        alert(data.error || "Failed to save alerts.");
+      }
+    } catch (err) {
+      alert("Error saving preferences.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Alert Preferences';
+    }
+  });
+</script>
 {% endblock %}

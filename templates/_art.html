@@ -1,4 +1,5 @@
 {# Shared SVG illustrations. Import with: {% from "_art.html" import night_path, mini_city with context %} #}
+{% macro css_style(val) %}{{ ('style="' ~ val ~ '"')|safe }}{% endmacro %}
 
 {# Night city + person with backpack + glowing career path (Explore → Apply → Interview → Get Hired). #}
 {% macro night_path(labels=('Explore', 'Apply', 'Interview', 'Get Hired'), uid='np') %}
@@ -19,7 +20,7 @@
   <circle cx="560" cy="48" r="34" fill="url(#{{ uid }}-moon)" opacity=".55"/>
   <circle cx="560" cy="48" r="13" fill="#FFF4C8" opacity=".95"/>
   {% for x, y, d in [(210,30,0),(300,18,0.6),(380,52,1.2),(470,24,0.3),(250,78,1.8),(420,96,0.9),(610,120,1.5),(340,110,2.1),(160,60,2.4),(520,90,0.4)] %}
-  <circle cx="{{ x }}" cy="{{ y }}" r="1.4" fill="#fff" class="nx-twinkle" style="animation-delay:{{ d }}s"/>
+  <circle cx="{{ x }}" cy="{{ y }}" r="1.4" fill="#fff" class="nx-twinkle" {{ css_style('animation-delay:' ~ d ~ 's') }}/>
   {% endfor %}
 
   <!-- far skyline -->
@@ -30,7 +31,7 @@
   <g>
     <path d="M300 300V222h30v78zM338 300V196h26v104zM372 300V230h22v70zM404 300V188h34v112zM446 300V214h24v86zM478 300V176h30v124zM516 300V222h28v78zM552 300V192h36v108zM596 300V218h44v82z" fill="url(#{{ uid }}-bld2)"/>
     {% for x, y, d in [(344,206,0),(352,218,1),(410,198,0.5),(420,212,1.6),(430,226,0.2),(484,186,1.1),(494,200,0.7),(484,214,2),(560,202,0.3),(572,216,1.4),(560,230,0.9),(604,228,1.8),(452,224,0.6),(522,232,1.2),(306,232,2.2)] %}
-    <rect x="{{ x }}" y="{{ y }}" width="4" height="5" rx="1" fill="#FFD27A" class="nx-twinkle" style="animation-delay:{{ d }}s"/>
+    <rect x="{{ x }}" y="{{ y }}" width="4" height="5" rx="1" fill="#FFD27A" class="nx-twinkle" {{ css_style('animation-delay:' ~ d ~ 's') }}/>
     {% endfor %}
   </g>
 
@@ -43,7 +44,7 @@
   {% set pts = [(444,277,'#2BE0BE'),(521,236,'#5B8CFF'),(568,179,'#A78BFA'),(612,82,'#FFB74A')] %}
   {% for x, y, c in pts %}
   <g>
-    <circle cx="{{ x }}" cy="{{ y }}" r="6" fill="{{ c }}" class="nx-pulse-dot" style="animation-delay:{{ loop.index0 * 0.5 }}s"/>
+    <circle cx="{{ x }}" cy="{{ y }}" r="6" fill="{{ c }}" class="nx-pulse-dot" {{ css_style('animation-delay:' ~ (loop.index0 * 0.5) ~ 's') }}/>
     <circle cx="{{ x }}" cy="{{ y }}" r="6.5" fill="{{ c }}" stroke="#0A1232" stroke-width="2.5"/>
     <g transform="translate({{ (x + 10) if loop.first else ((x - 84) if loop.last else (x - 34)) }}, {{ (y - 30) if loop.first else ((y + 12) if loop.last else (y - 36)) }})">
       <rect width="68" height="22" rx="11" fill="#0B1438" fill-opacity=".85" stroke="{{ c }}" stroke-opacity=".7"/>
@@ -85,7 +86,8 @@
 {% macro hero_bg(name, alt='') %}
 <div class="hidden lg:block absolute inset-0 pointer-events-none" aria-hidden="{{ 'false' if alt else 'true' }}">
   <img src="{{ url_for('static', filename='images/' ~ name ~ '.svg') }}" alt="{{ alt }}"
-       onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/' ~ name ~ '.webp') }}'"
+       data-fallback="{{ url_for('static', filename='images/' ~ name ~ '.webp') }}"
+       onerror="this.onerror=null;this.src=this.getAttribute('data-fallback');"
        class="w-full h-full object-cover object-right-bottom select-none" width="1600" height="600" loading="eager" decoding="async" draggable="false">
 </div>
 {% endmacro %}
@@ -93,7 +95,8 @@
 {% macro hero_mobile(name, alt='') %}
 <div class="lg:hidden -mx-6 sm:-mx-8 mt-5 overflow-hidden pointer-events-none" style="aspect-ratio:800/520">
   <img src="{{ url_for('static', filename='images/' ~ name ~ '-mobile.svg') }}" alt="{{ alt }}"
-       onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/' ~ name ~ '-mobile.webp') }}'"
+       data-fallback="{{ url_for('static', filename='images/' ~ name ~ '-mobile.webp') }}"
+       onerror="this.onerror=null;this.src=this.getAttribute('data-fallback');"
        class="w-full h-full object-cover select-none" width="800" height="520" loading="eager" decoding="async" draggable="false">
 </div>
 {% endmacro %}

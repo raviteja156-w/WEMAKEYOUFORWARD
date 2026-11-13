@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, session, jsonify, request
+from flask import Flask, render_template, session, jsonify, request, redirect, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import data
@@ -193,8 +193,10 @@ def seeker_dashboard():
     apps = seeker_portal._applications_view(ctx["row"]["id"])
     counts = {st: sum(1 for a in apps if a["status"] == st) for st in store.APPLICATION_STATUSES}
     saved = [j for j in (data.get_job(i) for i in store.saved_job_ids(ctx["row"]["id"])) if j]
+    matching_alerts = seeker_portal.matching_alerts_for_seeker(ctx["row"]["id"])
     return render_template("seeker_dashboard.html", **ctx, applications=apps, status_counts=counts,
                            saved=saved, statuses=store.APPLICATION_STATUSES,
+                           matching_alerts=matching_alerts,
                            resume_updated=store.format_date(ctx["resume"]["updated_at"]) if ctx["resume"] else "",
                            salary_label=data.salary_label)
 
@@ -211,8 +213,8 @@ def employer_dashboard():
     return render_template(
         "employer_dashboard.html", company=current_company(), my_jobs=my_jobs,
         active_jobs=len(live_jobs),
-        total_views=sum(j["views"] for j in my_jobs),
-        total_apps=sum(j["applications_count"] for j in my_jobs),
+        total_views=sum(j.get("views", 0) or 0 for j in my_jobs),
+        total_apps=sum(j.get("applications_count", 0) or 0 for j in my_jobs),
         shortlisted=shortlisted, recent_applicants=recent_applicants)
 
 
@@ -379,6 +381,22 @@ def api_resolve_report(report_id):
     if job_store.resolve_report(report_id):
         return jsonify({"ok": True})
     return jsonify({"ok": False}), 404
+
+
+@app.route("/interview")
+@app.route("/interview-practice")
+def top_interview_redirect():
+    return redirect(url_for("seeker.interview_practice"))
+
+
+@app.route("/resume")
+def top_resume_redirect():
+    return redirect(url_for("seeker.resume"))
+
+
+@app.route("/alerts")
+def top_alerts_redirect():
+    return redirect(url_for("seeker.alerts"))
 
 
 # ------------------------------------------------------------------ CLI --

@@ -8,17 +8,31 @@
 {% block content %}{% include "seeker/_discover_jobs_content.html" %}{% endblock %}
 {% block site_footer %}{% endblock %}
 {% block scripts %}
+<script id="nexora-bootstrap-data" type="application/json">
+{
+  "jobs": {{ jobs_json | tojson }},
+  "saved": {{ saved_ids | tojson }},
+  "applied": {{ applied_ids | tojson }},
+  "role": {{ demo_role | default('guest', true) | tojson }},
+  "filters": {
+    "locations": {{ locations | tojson }},
+    "industries": {{ industries | tojson }},
+    "jobTypes": {{ job_types | tojson }},
+    "workModes": {{ work_modes | tojson }},
+    "experienceLevels": {{ experience_levels | tojson }}
+  }
+}
+</script>
 <script>
-window.NEXORA_JOBS = {{ jobs_json | tojson }};
-window.NEXORA_SAVED = {{ saved_ids | tojson }};
-window.NEXORA_APPLIED = {{ applied_ids | tojson }};
-window.NEXORA_ROLE = {{ demo_role | default('guest', true) | tojson }};
-window.NEXORA_PREVIEW = false;
-window.NEXORA_FILTER_OPTIONS = {
-  locations: {{ locations | tojson }}, industries: {{ industries | tojson }},
-  jobTypes: {{ job_types | tojson }}, workModes: {{ work_modes | tojson }},
-  experienceLevels: {{ experience_levels | tojson }}
-};
+(function() {
+  const data = JSON.parse(document.getElementById('nexora-bootstrap-data').textContent || '{}');
+  window.NEXORA_JOBS = data.jobs || [];
+  window.NEXORA_SAVED = data.saved || [];
+  window.NEXORA_APPLIED = data.applied || [];
+  window.NEXORA_ROLE = data.role || 'guest';
+  window.NEXORA_PREVIEW = false;
+  window.NEXORA_FILTER_OPTIONS = data.filters || {};
+})();
 </script>
 <script src="{{ url_for('static', filename='js/discover-jobs-reference.js') }}"></script>
 <script>document.addEventListener('DOMContentLoaded', function () { if (window.lucide) window.lucide.createIcons(); });</script>

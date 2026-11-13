@@ -68,7 +68,7 @@ tailwind.config = {
 {% endmacro %}
 
 {% macro side_link(href, icon, label, active=False, onclick=None, badge=None) %}
-  <a href="{{ href }}" {% if onclick %}onclick="{{ onclick }}; return false;"{% endif %}
+  <a href="{{ href }}" {% if onclick %}{{ ('onclick="' ~ onclick ~ '; return false;"')|safe }}{% endif %}
      class="nx-side-link{% if active %} is-active{% endif %}"{% if active %} aria-current="page"{% endif %}>
     <i data-lucide="{{ icon }}" class="w-[18px] h-[18px] shrink-0"></i>
     <span class="flex-1 truncate">{{ label }}</span>
@@ -100,15 +100,15 @@ tailwind.config = {
     {{ side_link(url_for('seeker.applications'), 'file-check-2', 'My Applications', ep == 'seeker.applications') }}
     {{ side_link(url_for('seeker.profile'), 'user-round', 'Career Profile', ep == 'seeker.profile') }}
     {{ side_link(url_for('seeker.resume'), 'file-text', 'Resume Studio', ep == 'seeker.resume') }}
-    {{ side_link('#', 'mic', 'Interview Practice', False, "comingSoon('Interview Practice')") }}
+    {{ side_link(url_for('seeker.interview_practice'), 'mic', 'Interview Practice', ep in ('seeker.interview_practice', 'seeker.interview')) }}
     {{ side_link(url_for('seeker_dashboard') ~ '#saved', 'bookmark', 'Saved Roles', False, None, saved_count if saved_count else None) }}
   </nav>
   <div class="nx-side-divider"></div>
   <nav class="space-y-1">
     {{ side_link(url_for('seeker.matches'), 'sparkles', 'Job Matches', ep == 'seeker.matches') }}
-    {{ side_link('#', 'bell-ring', 'Job Alerts', False, "comingSoon('Job Alerts')") }}
+    {{ side_link(url_for('seeker.alerts'), 'bell-ring', 'Job Alerts', ep == 'seeker.alerts') }}
     {{ side_link(url_for('companies'), 'building-2', 'Companies', ep in ('companies', 'company_jobs')) }}
-    {{ side_link('#', 'book-open', 'Career Resources', False, "comingSoon('Career Resources')") }}
+    {{ side_link(url_for('seeker.interview_practice'), 'book-open', 'Career Resources', ep in ('seeker.interview_practice', 'seeker.interview')) }}
   </nav>
 
   {% if not (seeker_user and seeker_user.is_premium) %}

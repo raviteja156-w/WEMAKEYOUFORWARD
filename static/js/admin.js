@@ -68,5 +68,23 @@
     showToast('Report marked resolved.', { icon: 'check-circle-2' });
   };
 
+  document.addEventListener('click', function(e) {
+    const modBtn = e.target.closest('[data-moderate-id]');
+    if (modBtn) {
+      e.preventDefault();
+      const id = modBtn.getAttribute('data-moderate-id');
+      const act = modBtn.getAttribute('data-moderate-action');
+      if (id && act && window.moderate) window.moderate(id, act);
+      return;
+    }
+    const resBtn = e.target.closest('[data-resolve-report]');
+    if (resBtn) {
+      e.preventDefault();
+      const rid = resBtn.getAttribute('data-resolve-report');
+      if (rid && window.resolveReport) window.resolveReport(rid);
+      return;
+    }
+  });
+
   applyFilter();
 })();

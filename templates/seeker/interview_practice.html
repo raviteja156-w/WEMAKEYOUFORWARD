@@ -1,39 +1,505 @@
 {% extends "base.html" %}
 {% from "seeker/_macros.html" import page_head with context %}
-{% block title %}Interview Practice — NEXORA{% endblock %}
+{% block title %}Interview Preparation & AI Coach — NEXORA{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 md:px-8 py-8 md:py-10">
-  {{ page_head('chart-no-axes-column-increasing', 'Interview Practice', 'Prepare for Australian job interviews with tailored role questions and frameworks.', 'icon-badge-indigo') }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
 
-  <div class="tint tint-indigo p-4 md:p-6 space-y-6">
-    <div class="bg-white rounded-2xl border border-grey-line p-6">
-      <h2 class="font-display font-bold text-lg text-navy mb-2">Common Australian Interview Questions</h2>
-      <p class="text-sm text-ink/60 mb-6">Master the STAR technique (Situation, Task, Action, Result) for behavioral and competency interviews.</p>
-      
-      <div class="space-y-4">
-        <div class="p-4 rounded-xl bg-grey/5 border border-grey-line">
-          <p class="font-semibold text-navy text-sm">1. "Tell me about a time you solved a complex technical or operational challenge."</p>
-          <p class="text-xs text-ink/50 mt-1">Focus on clear stakeholder communication, step-by-step troubleshooting, and measurable outcomes.</p>
-        </div>
-        <div class="p-4 rounded-xl bg-grey/5 border border-grey-line">
-          <p class="font-semibold text-navy text-sm">2. "How do you prioritize deliverables when managing competing deadlines?"</p>
-          <p class="text-xs text-ink/50 mt-1">Demonstrate organizational agility, async updates, and proactive risk mitigation.</p>
-        </div>
-        <div class="p-4 rounded-xl bg-grey/5 border border-grey-line">
-          <p class="font-semibold text-navy text-sm">3. "Describe a situation where you had to collaborate with a cross-functional team."</p>
-          <p class="text-xs text-ink/50 mt-1">Highlight empathy, conflict resolution, and working toward shared company goals.</p>
-        </div>
-      </div>
-    </div>
+<style>
+/* Handwritten Notebook Paper styling adapted from GrowthPulse */
+.paper {
+  --lh: 2.1rem;
+  --mg: 2.6rem;
+  font-family: 'Kalam', 'Segoe Print', cursive, sans-serif;
+  font-size: 1.15rem;
+  line-height: var(--lh);
+  color: #1e3a8a;
+  background-color: #fffdf4;
+  border-radius: 0.85rem;
+  border-top: 0.8rem solid #fffdf4;
+  padding: 0 1.2rem 0 calc(var(--mg) + 0.8rem);
+  margin: 0.8rem 0;
+  background-image:
+    linear-gradient(to right, transparent var(--mg), #f87171 var(--mg), #f87171 calc(var(--mg) + 2px), transparent calc(var(--mg) + 2px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--lh) - 1px), #bcd6f3 calc(var(--lh) - 1px), #bcd6f3 var(--lh));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.paper .stp { font-weight: 700; color: #1d4ed8; }
+.paper .hd { font-weight: 700; color: #9a3412; font-size: 1.25rem; }
+.paper .eq { padding-left: 1.5rem; color: #4338ca; }
+.paper .ans { font-weight: 700; color: #047857; text-decoration: underline double #047857; text-underline-offset: 4px; }
+.paper pre { font-family: 'Consolas', monospace; font-size: 0.95rem; line-height: 1.4; background: rgba(0,0,0,0.06); padding: 0.5rem; border-radius: 6px; }
 
-    <div class="bg-white rounded-2xl border border-grey-line p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+/* Day card badge */
+.day-tab.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(6, 182, 212, 0.45)) !important;
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.35);
+}
+</style>
+
+<div class="max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-10 space-y-8">
+  {{ page_head('chart-no-axes-column-increasing', 'Interview Preparation & AI Coach', 'Custom day-by-day interview roadmap, handwritten-style conceptual lessons, live AI doubt solving, and diagnostic mastery testing.', 'icon-badge-indigo') }}
+
+  <!-- ================= INTERVIEW SETUP CARD (ROLE, DESCRIPTION, REQUIREMENTS, TARGET DAYS) ================= -->
+  <section class="nx-glass p-6 md:p-8 rounded-3xl border border-cyan-400/30 relative overflow-hidden" style="background: radial-gradient(circle at 12% 10%, rgba(37,99,235,0.20) 0%, rgba(10,18,54,0.94) 100%)">
+    <div class="flex items-center justify-between gap-4 flex-wrap pb-4 border-b border-white/10">
       <div>
-        <h3 class="font-display font-bold text-navy">Need personalized mock questions?</h3>
-        <p class="text-xs text-ink/60 mt-1">Make sure your career profile and skills are up-to-date for targeted interview preparation.</p>
+        <div class="flex items-center gap-2.5">
+          <span class="w-9 h-9 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-cyan-500/25">🎯</span>
+          <h2 class="font-display text-xl md:text-2xl font-bold text-white">Target Interview Setup</h2>
+        </div>
+        <p class="text-xs md:text-sm text-cream/70 mt-1">Specify the target role, company requirements, and how many days you have. NEXORA will build your tailored day-by-day plan and auto-sync your profile.</p>
       </div>
-      <a href="{{ url_for('seeker.profile') }}" class="btn btn-primary btn-sm shrink-0">Review My Profile</a>
+      <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">Auto-Profile Sync</span>
     </div>
-  </div>
+
+    <form id="interview-setup-form" class="mt-6 space-y-4">
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-cream/80 mb-1.5">Target Job Role *</label>
+          <input type="text" id="job-role" name="job_role" required class="w-full bg-[#060D24] border border-blue-500/30 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-cream/35 outline-none focus:border-cyan-400 transition-all" placeholder="e.g. Lead Full-Stack Engineer, Data Engineer, Product Manager" value="{{ profile.headline or (plan.job_role if plan else 'Senior Software Engineer') }}">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-cream/80 mb-1.5">Target Preparation Days</label>
+          <select id="target-days" name="target_days" class="w-full bg-[#060D24] border border-blue-500/30 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-cyan-400">
+            {% for d in [3, 5, 7, 10, 14, 21, 30] %}
+            <option value="{{ d }}" {% if (plan.total_days if plan else 7) == d %}selected{% endif %}>{{ d }} Days {% if d == 3 %}(Crash Prep){% elif d == 7 %}(Recommended 1-Week){% elif d == 14 %}(2-Week Deep Dive){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-cream/80 mb-1.5">Job Description & Responsibilities</label>
+          <textarea id="job-description" name="job_description" rows="3" class="w-full bg-[#060D24] border border-blue-500/30 rounded-xl p-3 text-xs text-white placeholder:text-cream/35 outline-none focus:border-cyan-400" placeholder="Paste key role responsibilities or technology expectations..."></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-cream/80 mb-1.5">Company Requirements & Desired Tech Stack</label>
+          <textarea id="company-requirements" name="company_requirements" rows="3" class="w-full bg-[#060D24] border border-blue-500/30 rounded-xl p-3 text-xs text-white placeholder:text-cream/35 outline-none focus:border-cyan-400" placeholder="e.g. 5+ years Python/React, AWS cloud architecture, distributed systems, high availability..."></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-4 pt-2 flex-wrap">
+        <p class="text-xs text-emerald-400 flex items-center gap-1.5">
+          <span>✓</span> Target role and key technologies are automatically saved into your seeker profile.
+        </p>
+        <button type="submit" id="btn-generate-plan" class="btn nx-btn-glow px-6 py-3 text-sm font-bold flex items-center gap-2">
+          <span>⚡ Generate Day-by-Day Plan & Sync Profile</span>
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ================= DAY-BY-DAY ROADMAP & INTERVIEW WORKSPACE ================= -->
+  <section class="space-y-6">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h3 class="font-display text-xl font-bold text-white flex items-center gap-2">
+          <span>📅</span> Day-by-Day Preparation Plan for <span id="active-role-title" class="text-cyan-300">{{ plan.job_role if plan else (profile.headline or 'Software Engineer') }}</span>
+        </h3>
+        <p class="text-xs text-cream/60 mt-1" id="plan-overview-text">{{ plan.overview if plan else 'Select any day below to review handwritten-style lessons, ask AI doubts, and test topic mastery.' }}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-cream/80"><span id="days-count-badge">{{ plan.days|length if plan else 7 }}</span> Days Total</span>
+      </div>
+    </div>
+
+    <!-- Day Selector Tabs (Horizontal Scrollable) -->
+    <div id="day-tabs-container" class="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+      {% for d in (plan.days if plan else []) %}
+      <button type="button" class="day-tab shrink-0 px-4 py-3 rounded-2xl bg-[#0B1438]/80 border border-white/10 hover:border-cyan-400/50 text-left transition-all min-w-[140px] {{ 'active' if loop.first else '' }}" data-day-index="{{ loop.index0 }}">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Day {{ d.day }}</p>
+        <p class="text-xs font-bold text-white truncate mt-0.5">{{ d.focus_area }}</p>
+        <p class="text-[10px] text-cream/50 mt-1">{{ d.questions_count }} Questions</p>
+      </button>
+      {% endfor %}
+    </div>
+
+    <!-- Active Day Workspace Card -->
+    <div class="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
+
+      <!-- Left Column: Handwritten-Style Notebook Paper Note & Ask AI Drawer -->
+      <div class="space-y-6">
+        <div class="nx-glass p-6 rounded-3xl border border-white/10" style="background:#0B1438">
+          <div class="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
+            <div>
+              <span id="active-focus-pill" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-blue-500/20 text-cyan-300 border border-cyan-400/30">Core Architecture</span>
+              <h4 id="active-day-heading" class="font-display text-lg font-bold text-white mt-1.5">Day 1 · Core Engineering & Fundamentals</h4>
+            </div>
+            <div class="flex gap-2">
+              <button type="button" id="btn-copy-note" class="px-3 py-1.5 rounded-xl border border-white/10 hover:bg-white/5 text-xs text-cream/80 transition-colors">📋 Copy</button>
+              <button type="button" onclick="window.print()" class="px-3 py-1.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-xs font-bold hover:bg-cyan-500/30 transition-colors">↓ Download Notes</button>
+            </div>
+          </div>
+
+          <!-- Handwritten Paper Lesson Container -->
+          <div class="mt-4">
+            <p class="text-xs text-cream/60 mb-2 flex items-center gap-1.5 font-medium">
+              <span>✍️</span> <strong>Handwritten Study Sheet (First-Principles Lesson)</strong>
+            </p>
+            <div id="handwritten-paper" class="paper">
+              <div class="hd">Day 1 · Core Fundamentals</div>
+              <div class="ln"><span class="stp">Principle:</span> Halving divides the search space logarithmically.</div>
+              <div class="ln">Merge Sort splits a list in half repeatedly, then merges small sorted lists.</div>
+              <div class="ln">Example: Sorting [5, 2, 9, 1]</div>
+              <div class="ln eq">Split: [5, 2] and [9, 1]</div>
+              <div class="ln eq">Sort & Merge: [2, 5] and [1, 9] -> <span class="ans">[1, 2, 5, 9]</span></div>
+              <div class="ln">Guaranteed runtime: <span class="stp">O(n log n)</span> at all times.</div>
+            </div>
+          </div>
+
+          <!-- Contextual Ask AI Drawer -->
+          <div class="mt-6 pt-5 border-t border-white/10">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <h5 class="font-display text-sm font-bold text-white flex items-center gap-2">
+                <span>🤖</span> Ask AI About This Topic
+              </h5>
+              <span class="text-[11px] text-cyan-400 font-mono">Groq Llama-3 Powered</span>
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="ai-question-input" class="flex-1 bg-[#060D24] border border-blue-500/30 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-cream/35 outline-none focus:border-cyan-400" placeholder="e.g. Why is Merge Sort preferred over Quick Sort for linked lists?">
+              <button type="button" id="btn-ask-ai" class="btn btn-sm btn-accent text-xs font-bold px-4">Ask AI</button>
+            </div>
+            <div id="ai-answer-box" class="hidden mt-3 p-4 rounded-xl bg-[#060D24] border border-cyan-400/30 text-xs text-cyan-100 whitespace-pre-wrap leading-relaxed shadow-inner">
+            </div>
+          </div>
+
+          <!-- Mock Interview Q&A Section -->
+          <div class="mt-6 pt-5 border-t border-white/10 space-y-3">
+            <h5 class="font-display text-sm font-bold text-white flex items-center gap-2">
+              <span>🎤</span> High-Probability Interview Questions
+            </h5>
+            <div id="mock-qa-container" class="space-y-2.5">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Diagnostic Quiz, Topic Mastery & Weak Topic Retraining -->
+      <div class="space-y-6">
+        <!-- Diagnostic Quiz Card -->
+        <div class="nx-glass p-5 rounded-3xl border border-white/10" style="background:#0B1438">
+          <div class="flex items-center justify-between gap-2 pb-3 border-b border-white/10">
+            <h4 class="font-display text-sm font-bold text-white flex items-center gap-2">
+              <span>🧪</span> Daily Diagnostic Test
+            </h4>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-400/20 text-cyan-300">MCQ Practice</span>
+          </div>
+
+          <div id="quiz-container" class="mt-4 space-y-4">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Topic Mastery Analysis & Retrain Card (From GrowthPulse Scene 6) -->
+        <div class="nx-glass p-5 rounded-3xl border border-cyan-400/30" style="background:#0B1438">
+          <div class="flex items-center justify-between gap-2 pb-3 border-b border-white/10">
+            <h4 class="font-display text-sm font-bold text-white flex items-center gap-2">
+              <span>📊</span> Your Topic Analysis
+            </h4>
+            <span id="overall-mastery-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300">68% Mastery</span>
+          </div>
+
+          <div class="space-y-3 mt-4 text-xs">
+            <div>
+              <div class="flex justify-between text-cream/70 mb-1">
+                <span>Core Architecture</span>
+                <span id="bar-arch-val" class="font-bold text-white">85%</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div id="bar-arch" class="h-full bg-cyan-400 rounded-full" style="width:85%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-cream/70 mb-1">
+                <span>Coding & Algorithms</span>
+                <span id="bar-algo-val" class="font-bold text-white">72%</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div id="bar-algo" class="h-full bg-blue-400 rounded-full" style="width:72%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-cream/70 mb-1">
+                <span>System Design & Tradeoffs</span>
+                <span id="bar-sys-val" class="font-bold text-white">55%</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div id="bar-sys" class="h-full bg-amber-400 rounded-full" style="width:55%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-cream/70 mb-1">
+                <span>Behavioral & STAR Leadership</span>
+                <span id="bar-beh-val" class="font-bold text-white">40%</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div id="bar-beh" class="h-full bg-rose-400 rounded-full" style="width:40%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-200 text-xs">
+            <p class="font-bold flex items-center gap-1.5">
+              <span>⚠️</span> Focus first on: <span id="weakest-topic-name">Behavioral & STAR (40%)</span>
+            </p>
+            <p class="text-[11px] text-amber-200/70 mt-0.5">Your diagnostic answers indicate more practice needed in leadership and cross-functional conflict scenarios.</p>
+          </div>
+
+          <button type="button" id="btn-retrain-plan" class="btn btn-block mt-4 py-2.5 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-lg shadow-orange-500/20 text-white">
+            <span>⚡ Retrain Plan Around Weak Topics</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script id="nx-plan-data" type="application/json">{{ (plan or {})|tojson }}</script>
+<script>
+  let planData = JSON.parse(document.getElementById('nx-plan-data').textContent || '{}');
+  let activeIndex = 0;
+
+  function renderActiveDay(idx) {
+    if (!planData || !planData.days || !planData.days[idx]) return;
+    activeIndex = idx;
+    const day = planData.days[idx];
+
+    // Update active tab styles
+    document.querySelectorAll('.day-tab').forEach((tab, i) => {
+      tab.classList.toggle('active', i === idx);
+    });
+
+    // Update Active Card Headers
+    document.getElementById('active-focus-pill').textContent = day.focus_area || 'Core Fundamentals';
+    document.getElementById('active-day-heading').textContent = `Day ${day.day} · ${day.title}`;
+
+    // Render Handwritten Note
+    const paper = document.getElementById('handwritten-paper');
+    paper.innerHTML = `
+      <div class="hd">Day ${day.day} · ${day.title}</div>
+      <div class="ln"><span class="stp">Focus:</span> ${day.focus_area} · ${day.questions_count} Questions</div>
+      <div class="ln">${day.handwritten_note}</div>
+      <div class="ln"><span class="ans">Key Takeaway:</span> Be prepared to justify time/space trade-offs with concrete metrics.</div>
+    `;
+
+    // Render Mock Q&A
+    const qaBox = document.getElementById('mock-qa-container');
+    qaBox.innerHTML = '';
+    (day.mock_questions || []).forEach((item, i) => {
+      const card = document.createElement('div');
+      card.className = 'p-3 rounded-xl bg-white/5 border border-white/10 text-xs';
+      card.innerHTML = `
+        <p class="font-bold text-cyan-200">Q${i+1}: ${item.q}</p>
+        <p class="text-cream/70 mt-1 leading-relaxed"><strong class="text-emerald-300">Coach Tip:</strong> ${item.a}</p>
+      `;
+      qaBox.appendChild(card);
+    });
+
+    // Render Diagnostic Quiz
+    const quizBox = document.getElementById('quiz-container');
+    quizBox.innerHTML = '';
+    (day.diagnostic_quiz || []).forEach((qItem, qIdx) => {
+      const qDiv = document.createElement('div');
+      qDiv.className = 'p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-2.5';
+      qDiv.innerHTML = `
+        <p class="font-bold text-white">Q${qIdx+1}: ${qItem.question}</p>
+        <div class="space-y-1.5" id="opt-group-${qIdx}">
+          ${(qItem.options || []).map((opt, optIdx) => `
+            <button type="button" class="w-full text-left p-2 rounded-lg bg-[#060D24] hover:bg-white/10 border border-white/10 text-cream/80 transition-colors flex items-center justify-between" onclick="checkQuizAnswer(${qIdx}, ${optIdx}, ${qItem.correct_index}, '${qItem.explanation.replace(/'/g, "\\'")}')">
+              <span>${opt}</span>
+              <span id="badge-${qIdx}-${optIdx}"></span>
+            </button>
+          `).join('')}
+        </div>
+        <div id="expl-${qIdx}" class="hidden p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/30 text-[11px] text-emerald-200"></div>
+      `;
+      quizBox.appendChild(qDiv);
+    });
+
+    // Reset Ask AI box
+    document.getElementById('ai-answer-box').classList.add('hidden');
+    document.getElementById('ai-question-input').value = '';
+  }
+
+  window.checkQuizAnswer = function(qIdx, selected, correct, explanation) {
+    const group = document.getElementById(`opt-group-${qIdx}`);
+    const buttons = group.querySelectorAll('button');
+    buttons.forEach((btn, idx) => {
+      btn.disabled = true;
+      if (idx === correct) {
+        btn.classList.add('bg-emerald-500/20', 'border-emerald-400', 'text-emerald-200');
+        btn.querySelector('span:last-child').textContent = '✓ Correct';
+      } else if (idx === selected) {
+        btn.classList.add('bg-rose-500/20', 'border-rose-400', 'text-rose-200');
+        btn.querySelector('span:last-child').textContent = '✗';
+      }
+    });
+    const explBox = document.getElementById(`expl-${qIdx}`);
+    explBox.textContent = `Explanation: ${explanation}`;
+    explBox.classList.remove('hidden');
+
+    // Dynamically tweak topic mastery scores
+    if (selected === correct) {
+      updateMastery(5);
+    } else {
+      updateMastery(-5);
+    }
+  };
+
+  function updateMastery(delta) {
+    const bar = document.getElementById('bar-algo');
+    const val = document.getElementById('bar-algo-val');
+    let curr = parseInt(val.textContent) || 72;
+    curr = Math.max(20, Math.min(98, curr + delta));
+    val.textContent = `${curr}%`;
+    bar.style.width = `${curr}%`;
+  }
+
+  // Setup Form Submit (Generate Plan & Auto-save Profile)
+  const setupForm = document.getElementById('interview-setup-form');
+  const btnGen = document.getElementById('btn-generate-plan');
+
+  setupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const role = document.getElementById('job-role').value.trim();
+    const desc = document.getElementById('job-description').value.trim();
+    const reqs = document.getElementById('company-requirements').value.trim();
+    const days = document.getElementById('target-days').value;
+
+    if (!role) {
+      alert("Please enter a target job role.");
+      return;
+    }
+
+    btnGen.disabled = true;
+    btnGen.innerHTML = `<span>⏳ Building Day-by-Day Plan with Groq AI...</span>`;
+
+    try {
+      const res = await fetch('/api/seeker/interview/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_role: role,
+          job_description: desc,
+          company_requirements: reqs,
+          target_days: days
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(data.error || "Failed to generate plan.");
+        return;
+      }
+
+      planData = data.plan;
+      document.getElementById('active-role-title').textContent = planData.job_role;
+      document.getElementById('plan-overview-text').textContent = planData.overview;
+      document.getElementById('days-count-badge').textContent = planData.days.length;
+
+      // Rebuild tabs
+      const tabsCont = document.getElementById('day-tabs-container');
+      tabsCont.innerHTML = '';
+      planData.days.forEach((d, i) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `day-tab shrink-0 px-4 py-3 rounded-2xl bg-[#0B1438]/80 border border-white/10 hover:border-cyan-400/50 text-left transition-all min-w-[140px] ${i === 0 ? 'active' : ''}`;
+        btn.dataset.dayIndex = i;
+        btn.innerHTML = `
+          <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Day ${d.day}</p>
+          <p class="text-xs font-bold text-white truncate mt-0.5">${d.focus_area}</p>
+          <p class="text-[10px] text-cream/50 mt-1">${d.questions_count} Questions</p>
+        `;
+        btn.addEventListener('click', () => renderActiveDay(i));
+        tabsCont.appendChild(btn);
+      });
+
+      renderActiveDay(0);
+      alert(`Success! Generated a ${planData.days.length}-day roadmap for ${planData.job_role} and saved your target role into your profile!`);
+    } catch (err) {
+      alert("Network error while communicating with Groq AI.");
+    } finally {
+      btnGen.disabled = false;
+      btnGen.innerHTML = `<span>⚡ Generate Day-by-Day Plan & Sync Profile</span>`;
+    }
+  });
+
+  // Attach tab click events to initial server-rendered tabs
+  document.querySelectorAll('.day-tab').forEach((tab, i) => {
+    tab.addEventListener('click', () => renderActiveDay(i));
+  });
+
+  // Ask AI in Context
+  const btnAsk = document.getElementById('btn-ask-ai');
+  const aiInput = document.getElementById('ai-question-input');
+  const aiAnswer = document.getElementById('ai-answer-box');
+
+  btnAsk.addEventListener('click', async () => {
+    const q = aiInput.value.trim();
+    if (!q) return;
+
+    btnAsk.disabled = true;
+    btnAsk.textContent = 'Thinking...';
+
+    const currentDay = planData.days ? planData.days[activeIndex] : null;
+    const topic = currentDay ? `${currentDay.title} (${currentDay.focus_area})` : "Software Interview";
+
+    try {
+      const res = await fetch('/api/seeker/interview/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: topic, question: q })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        aiAnswer.textContent = data.answer;
+        aiAnswer.classList.remove('hidden');
+      } else {
+        alert(data.error || "AI query failed.");
+      }
+    } catch (err) {
+      alert("Error contacting AI coach.");
+    } finally {
+      btnAsk.disabled = false;
+      btnAsk.textContent = 'Ask AI';
+    }
+  });
+
+  // Retrain Plan Around Weak Topics (GrowthPulse Scene 6)
+  document.getElementById('btn-retrain-plan').addEventListener('click', () => {
+    if (!planData || !planData.days) return;
+    // Shift behavioral and system design topics forward
+    planData.days.sort((a, b) => {
+      if (a.focus_area.includes('Behavioral') || a.focus_area.includes('Design')) return -1;
+      return 1;
+    });
+    // Re-index days
+    planData.days.forEach((d, i) => { d.day = i + 1; });
+    renderActiveDay(0);
+    alert("✓ Plan retrained! Restructured remaining days to focus on your weakest areas: Behavioral STAR leadership and System Design.");
+  });
+
+  // Copy Note Text
+  document.getElementById('btn-copy-note').addEventListener('click', () => {
+    const note = document.getElementById('handwritten-paper').innerText;
+    navigator.clipboard.writeText(note);
+    alert("Copied handwritten study notes to clipboard!");
+  });
+
+  // Initial render
+  if (planData && planData.days && planData.days.length > 0) {
+    renderActiveDay(0);
+  }
+</script>
 {% endblock %}
