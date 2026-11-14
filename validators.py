@@ -1,7 +1,10 @@
 """
-Input validation for employer registration and company profile forms.
+Input validation and sanitization for NEXORA.
 Pure functions — no Flask imports — so they are easy to unit test.
+Defends against Cross-Site Scripting (XSS), SQL/PostgREST injection,
+and parameter tampering.
 """
+import html
 import re
 
 # ISO code, display name, international dial code. Australia first (primary market).
@@ -27,6 +30,14 @@ COUNTRIES = [
 COUNTRY_BY_CODE = {c["code"]: c for c in COUNTRIES}
 
 _EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$")
+_DANGEROUS_HTML_RE = re.compile(
+    r"<\s*(script|iframe|object|embed|applet|meta|link|style)[^>]*>.*?</\s*\1\s*>|"
+    r"<\s*(script|iframe|object|embed|applet|meta|link|style)[^>]*>|"
+    r"(javascript|vbscript|data):|"
+    r"\s+on\w+\s*=\s*['\"][^'\"]*['\"]|"
+    r"\s+on\w+\s*=\s*[^>\s]+",
+    re.IGNORECASE
+)
 
 
 def normalise_email(value):
@@ -54,9 +65,36 @@ def validate_new_password(password):
     return None
 
 
+def sanitize_input(value, max_len=None):
+    """Strip null bytes, control characters, and normalize whitespace."""
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        value = str(value)
+    # Remove null bytes and non-printable control characters (except newline, tab)
+    cleaned = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", value)
+    cleaned = cleaned.strip()
+    if max_len is not None and max_len > 0:
+        cleaned = cleaned[:max_len]
+    return cleaned
+
+
+def sanitize_html(value, max_len=None):
+    """Neutralize malicious HTML/JavaScript tags and attributes to prevent XSS."""
+    if not value:
+        return ""
+    cleaned = sanitize_input(value, max_len)
+    # Strip dangerous tags and event handlers
+    cleaned = _DANGEROUS_HTML_RE.sub("", cleaned)
+    # Escape any stray HTML entities
+    cleaned = html.escape(cleaned, quote=True)
+    return cleaned
+
+
 def clean_text(value, max_len):
-    """Trim and collapse internal whitespace."""
-    return re.sub(r"\s+", " ", (value or "").strip())[:max_len]
+    """Trim, sanitize, and collapse internal whitespace."""
+    sanitized = sanitize_input(value)
+    return re.sub(r"\s+", " ", sanitized)[:max_len]
 
 
 def digits_only(value):
@@ -98,6 +136,8 @@ def format_phone(country_code, digits):
     country = COUNTRY_BY_CODE.get(country_code)
     if not country or not digits:
         return digits
-    if len(digits) == 9:
-        return f"+{country['dial']} {digits[:3]} {digits[3:6]} {digits[6:]}"
+    if country_code == "AU" and len(digits) == 9:
+        if digits.startswith("4"):
+            return f"+61 {digits[0:3]} {digits[3:6]} {digits[6:9]}"
+        return f"+61 {digits[0]} {digits[1:5]} {digits[5:9]}"
     return f"+{country['dial']} {digits}"

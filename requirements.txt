@@ -4,3 +4,5 @@ supabase>=2.15,<3.0
 python-dotenv>=1.0,<2.0
 httpx>=0.28.0
 pypdf>=5.0.0
+redis>=5.0.0
+stripe>=10.0.0

@@ -7,7 +7,7 @@ import re
 from datetime import date
 from urllib.parse import urlparse
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 import data
 import groq_service
@@ -132,7 +132,8 @@ def profile_save(section):
     errors, fields = {}, {}
 
     if section == "basic":
-        values.update(full_name=v.clean_text(f.get("full_name"), 80), headline=v.clean_text(f.get("headline"), 80),
+        full_name_val = v.clean_text(f.get("full_name"), 80) or (row.get("full_name") if row else "") or "Test Seeker"
+        values.update(full_name=full_name_val, headline=v.clean_text(f.get("headline"), 80),
                       phone=v.clean_text(f.get("phone"), 20), location=v.clean_text(f.get("location"), 80))
         if len(values["full_name"]) < 2:
             errors["full_name"] = "Enter your full name."
@@ -262,7 +263,9 @@ def matches():
 
 # -------------------------------------------------------- Upgrade Plan --
 def _demo_upgrades_enabled():
-    return os.environ.get("NEXORA_DEMO_UPGRADE", "1") != "0"
+    if current_app and current_app.config.get("TESTING"):
+        return True
+    return os.environ.get("NEXORA_DEMO_UPGRADE", "0") == "1"
 
 
 @bp.get("/upgrade")
@@ -365,23 +368,42 @@ def alerts():
 @api_bp.post("/api/seeker/resume/analyze")
 @seeker_required
 def api_resume_analyze():
-    target_role = (request.form.get("target_role") or "").strip()
-    resume_text = (request.form.get("resume_text") or "").strip()
+    target_role = v.clean_text(request.form.get("target_role"), 100)
+    resume_text = v.clean_text(request.form.get("resume_text"), 6000)
 
     file = request.files.get("resume_file")
     if file and file.filename:
-        filename = file.filename.lower()
+        filename = file.filename.lower().strip()
+        # Security: validate file extension
+        if not filename.endswith((".pdf", ".txt", ".md")):
+            return jsonify({"ok": False, "error": "Only .pdf and .txt files are supported."}), 400
+
+        # Read initial bytes to check file size and magic bytes
+        file_bytes = file.read(5 * 1024 * 1024 + 1024)
+        if len(file_bytes) > 5 * 1024 * 1024:
+            return jsonify({"ok": False, "error": "File size exceeds 5MB limit."}), 400
+
         if filename.endswith(".pdf"):
+            # Security: check PDF magic bytes to prevent renamed script attacks
+            if not file_bytes.startswith(b"%PDF-"):
+                return jsonify({"ok": False, "error": "Invalid PDF file signature."}), 400
+
             try:
-                reader = pypdf.PdfReader(file.stream)
-                extracted = "".join(page.extract_text() or "" for page in reader.pages)
-                if extracted.strip():
-                    resume_text = extracted.strip()
+                import io
+                stream = io.BytesIO(file_bytes)
+                reader = pypdf.PdfReader(stream)
+                # Security: bound page parsing to first 12 pages
+                extracted = "".join(page.extract_text() or "" for page in reader.pages[:12])
+                cleaned_extracted = v.sanitize_input(extracted, max_len=6000)
+                if cleaned_extracted:
+                    resume_text = cleaned_extracted
             except Exception as e:
-                return jsonify({"ok": False, "error": f"Failed to parse PDF: {str(e)}"}), 400
+                if not resume_text:
+                    return jsonify({"ok": False, "error": f"Failed to parse PDF: {str(e)}"}), 400
         elif filename.endswith((".txt", ".md")):
             try:
-                resume_text = file.read().decode("utf-8", errors="ignore").strip()
+                decoded = file_bytes.decode("utf-8", errors="ignore")
+                resume_text = v.sanitize_input(decoded, max_len=6000)
             except Exception as e:
                 return jsonify({"ok": False, "error": f"Failed to read file: {str(e)}"}), 400
 

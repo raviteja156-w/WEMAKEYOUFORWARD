@@ -149,11 +149,11 @@ def build_seed_jobs():
 
 
 DEMO_REPORTS = [
-    {"type": "Job listing", "reason": "Misleading salary range",
+    {"id": 1, "type": "Job listing", "reason": "Misleading salary range",
      "target": "Retail Supervisor — Bright Retail Co.", "status": "Open"},
-    {"type": "Employer", "reason": "Duplicate company profile",
+    {"id": 2, "type": "Employer", "reason": "Duplicate company profile",
      "target": "Southwind Logistics", "status": "Open"},
-    {"type": "Job listing", "reason": "Suspicious contact request",
+    {"id": 3, "type": "Job listing", "reason": "Suspicious contact request",
      "target": "Data Analyst — Ridgeline Analytics", "status": "Resolved"},
 ]
 

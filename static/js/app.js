@@ -1,3 +1,24 @@
+// ---------------------------------------------------------------- Global CSRF Interceptor
+(function () {
+  const origFetch = window.fetch;
+  window.fetch = function (url, options = {}) {
+    const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+    const token = metaCsrf ? metaCsrf.getAttribute('content') : '';
+    const method = (options.method || 'GET').toUpperCase();
+    if (token && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      options.headers = options.headers || {};
+      if (options.headers instanceof Headers) {
+        if (!options.headers.has('X-CSRF-Token')) options.headers.set('X-CSRF-Token', token);
+      } else if (Array.isArray(options.headers)) {
+        options.headers.push(['X-CSRF-Token', token]);
+      } else {
+        if (!options.headers['X-CSRF-Token']) options.headers['X-CSRF-Token'] = token;
+      }
+    }
+    return origFetch(url, options);
+  };
+})();
+
 // ---------------------------------------------------------------- Toasts
 function showToast(message, opts = {}) {
   const container = document.getElementById('toast-container');

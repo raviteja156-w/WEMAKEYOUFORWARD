@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Admin Sign In — NEXORA{% endblock %}
+{% block content %}
+
+<div class="max-w-md mx-auto px-5 py-12 md:py-16">
+  <div class="card p-8 md:p-10 shadow-xl border border-white/10">
+    <div class="text-center mb-8">
+      <span class="icon-badge icon-badge-rose w-12 h-12 mx-auto mb-3">
+        <i data-lucide="shield-check" class="w-6 h-6"></i>
+      </span>
+      <h1 class="font-display text-2xl font-bold text-navy">Admin Portal</h1>
+      <p class="text-xs text-ink/60 mt-1">Authorized marketplace staff only. Access is monitored and logged.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-5 space-y-2">
+          {% for category, message in messages %}
+            <div class="p-3 text-xs rounded-xl flex items-center gap-2 {% if category == 'error' %}bg-rose-50 text-rose-700 border border-rose-200{% else %}bg-mint-soft text-emerald-800 border border-emerald-200{% endif %}">
+              <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('admin_login') }}" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-navy/70 mb-1.5">Admin Email</label>
+        <div class="relative">
+          <input type="email" name="email" required placeholder="admin@nexora.com.au"
+                 class="w-full text-sm border border-grey-line rounded-xl px-3.5 py-2.5 outline-none focus:border-indigo bg-white">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-navy/70 mb-1.5">Password</label>
+        <div class="relative">
+          <input type="password" name="password" required placeholder="••••••••••••"
+                 class="w-full text-sm border border-grey-line rounded-xl px-3.5 py-2.5 outline-none focus:border-indigo bg-white">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-2 py-3 flex items-center justify-center gap-2">
+        <i data-lucide="lock" class="w-4 h-4"></i>
+        Authenticate Session
+      </button>
+    </form>
+
+    <div class="mt-6 pt-5 border-t border-grey-line text-center text-xs text-ink/40">
+      Need credentials? Set <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code> in your environment.
+    </div>
+  </div>
+</div>
+
+{% endblock %}

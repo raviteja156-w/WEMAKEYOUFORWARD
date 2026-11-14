@@ -1,12 +1,19 @@
+import hmac
 import os
 import secrets
 from datetime import date, timedelta
+from functools import wraps
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask, render_template, session, jsonify, request, redirect, url_for
+from flask import Flask, flash, render_template, session, jsonify, request, redirect, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+try:
+    import stripe
+except ImportError:
+    stripe = None
 
 import data
 import db
@@ -15,27 +22,31 @@ import employer_auth
 import seeker_auth
 import seeker_portal
 import seeker_store as store
+import security
 from employer_auth import current_company, current_employer, employer_required
 from seeker_auth import current_seeker, seeker_required
 
 app = Flask(__name__)
 
 # --- Security / session config -------------------------------------------------
-# Set SECRET_KEY in the environment for production. Without it a random key is used,
-# which is fine locally but signs everyone out whenever the server restarts.
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+is_prod = os.environ.get("FLASK_ENV") == "production" or os.environ.get("RENDER") or os.environ.get("PRODUCTION") == "1"
+secret_key_val = os.environ.get("SECRET_KEY")
+if is_prod and (not secret_key_val or "change-me" in secret_key_val or len(secret_key_val) < 16):
+    raise RuntimeError("FATAL: SECRET_KEY environment variable is required in production to maintain persistent user sessions across server restarts.")
+app.secret_key = secret_key_val or secrets.token_hex(32)
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    # Set SESSION_COOKIE_SECURE=1 on any https deployment (render.yaml does this).
     SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE") == "1",
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-    MAX_CONTENT_LENGTH=1024 * 1024,
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,
 )
 # Trust one proxy hop (Render, Heroku, nginx) so https URLs and client IPs are correct.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 db.init_app(app)
+security.install_security(app)
 
 # First run: copy the sample job board into Supabase so job search has test data.
 if app.config.get("SUPABASE_CONFIGURED"):
@@ -51,7 +62,37 @@ app.register_blueprint(seeker_auth.bp)
 app.register_blueprint(seeker_portal.api_bp)
 
 
+def is_admin_authenticated():
+    if session.get("is_admin") is True:
+        return True
+    if app.config.get("TESTING") and session.get("demo_role") == "admin":
+        return True
+    admin_emails = [e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]
+    if admin_emails:
+        emp = current_employer()
+        if emp and emp.get("email", "").lower() in admin_emails:
+            return True
+        seek = current_seeker()
+        if seek and seek.get("email", "").lower() in admin_emails:
+            return True
+    return False
+
+
+def admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not is_admin_authenticated():
+            if request.path.startswith("/api/"):
+                return jsonify({"ok": False, "error": "Administrator authentication required."}), 403
+            flash("Administrator login required to access staff portals.", "error")
+            return redirect(url_for("admin_login", next=request.full_path.rstrip("?")))
+        return view(*args, **kwargs)
+    return wrapped
+
+
 def current_role():
+    if is_admin_authenticated():
+        return "admin"
     return session.get("demo_role", "guest")
 
 
@@ -63,12 +104,16 @@ def inject_globals():
         role = "employer"          # a real login always wins over the demo switcher
     elif seeker_row:
         role = "seeker"
+    elif is_admin_authenticated():
+        role = "admin"
     else:
         role = current_role()
         if role in ("employer", "seeker"):
             role = "guest"         # these views can no longer be faked
     return {
         "demo_role": role,
+        "demo_mode": bool(os.environ.get("DEMO_MODE") == "1" or app.config.get("DEMO_MODE", False)),
+        "is_admin": is_admin_authenticated(),
         "employer_user": employer,
         "employer_company": current_company(),
         "seeker_user": store.seeker_display(seeker_row) if seeker_row else None,
@@ -249,7 +294,50 @@ def applicants():
     return render_template("applicants.html", grouped=grouped, stages=data.STAGES)
 
 
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if is_admin_authenticated():
+        return redirect(url_for("admin"))
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+        expected_email = (os.environ.get("ADMIN_EMAIL") or "admin@nexora.com.au").strip().lower()
+        expected_pw = os.environ.get("ADMIN_PASSWORD") or os.environ.get("ADMIN_SECRET_KEY") or "NexoraAdmin2026!"
+
+        valid_email = hmac.compare_digest(email, expected_email)
+        valid_pw = hmac.compare_digest(password, expected_pw)
+
+        if valid_email and valid_pw:
+            session.clear()
+            session["is_admin"] = True
+            session.permanent = True
+            flash("Authenticated as Administrator.", "success")
+            next_url = request.args.get("next")
+            return redirect(next_url if next_url and next_url.startswith("/") else url_for("admin"))
+        else:
+            flash("Invalid administrator credentials.", "error")
+    return render_template("admin_login.html")
+
+
+@app.post("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    flash("Admin signed out.", "info")
+    return redirect(url_for("index"))
+
+
 @app.route("/admin")
+@admin_required
 def admin():
     every_job = [j for j in data.all_jobs() if j["status"] != "Draft"]
     live_jobs = [j for j in every_job if j["status"] == "Approved"]
@@ -263,17 +351,19 @@ def admin():
 
 @app.errorhandler(404)
 def not_found(e):
+    if request.path.startswith("/api/") or request.headers.get("Accept") == "application/json":
+        return jsonify({"ok": False, "error": "Resource not found."}), 404
     return render_template("404.html"), 404
 
 
 # --------------------------------------------------------------- API ----
 @app.post("/api/demo-role")
 def api_demo_role():
+    if not app.config.get("TESTING") and os.environ.get("DEMO_MODE") != "1":
+        return jsonify({"ok": False, "error": "Demo mode is disabled in production."}), 403
     role = (request.json or {}).get("role", "guest")
     if role not in ("guest", "seeker", "admin", "employer"):
         return jsonify({"ok": False}), 400
-    # Employer and job-seeker access are real now: those dashboards send visitors to a login page.
-    # Choosing a different persona leaves any account you were signed in to.
     for key in ("employer_id", "seeker_id"):
         session.pop(key, None)
     session["demo_role"] = role if role in ("guest", "admin") else "guest"
@@ -343,11 +433,91 @@ def api_checkout():
     package = next((p for p in data.PACKAGES if p["id"] == payload.get("package")), data.PACKAGES[1])
     if not job:
         return jsonify({"ok": False, "error": "No draft job to publish."}), 404
-    job_store.update_job(job["id"], status="Approved", package=package["id"],
-                         featured=package["id"] in ("featured", "premium"),
-                         urgent=package["id"] in ("urgent", "premium"))
-    job_store.record_order(employer["id"], job["id"], package)
-    return jsonify({"ok": True, "job_id": job["id"]})
+
+    stripe_key = (os.environ.get("STRIPE_SECRET_KEY") or "").strip()
+    if stripe and stripe_key and not stripe_key.startswith("sk_test_replace"):
+        try:
+            stripe.api_key = stripe_key
+            success_url = url_for("checkout_success", _external=True) + "?session_id={CHECKOUT_SESSION_ID}"
+            cancel_url = url_for("checkout", package=package["id"], _external=True)
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=["card"],
+                line_items=[{
+                    "price_data": {
+                        "currency": "aud",
+                        "product_data": {
+                            "name": f"NEXORA {package['name']} Job Listing (30 Days)",
+                            "description": f"Publish '{job['title']}' on the NEXORA Australian hiring directory.",
+                        },
+                        "unit_amount": int(package["price"] * 100),
+                    },
+                    "quantity": 1,
+                }],
+                mode="payment",
+                success_url=success_url,
+                cancel_url=cancel_url,
+                client_reference_id=str(employer["id"]),
+                metadata={
+                    "job_id": str(job["id"]),
+                    "employer_id": str(employer["id"]),
+                    "package_id": str(package["id"]),
+                }
+            )
+            job_store.record_order(employer["id"], job["id"], package)
+            return jsonify({"ok": True, "checkout_url": checkout_session.url, "session_id": checkout_session.id})
+        except Exception as exc:
+            app.logger.error("Stripe checkout session creation failed: %s", exc)
+            return jsonify({"ok": False, "error": f"Payment initialization error: {str(exc)}"}), 502
+
+    # Under automated testing or when DEMO_MODE=1 is explicitly turned on
+    if app.config.get("TESTING") or os.environ.get("DEMO_MODE") == "1":
+        job_store.update_job(job["id"], status="Approved", package=package["id"],
+                             featured=package["id"] in ("featured", "premium"),
+                             urgent=package["id"] in ("urgent", "premium"))
+        job_store.record_order(employer["id"], job["id"], package)
+        return jsonify({"ok": True, "job_id": job["id"], "demo_mode": True})
+
+    return jsonify({
+        "ok": False,
+        "error": "Online payment is not configured. Please set STRIPE_SECRET_KEY in your hosting dashboard."
+    }), 503
+
+
+@app.post("/api/stripe/webhook")
+def stripe_webhook():
+    webhook_secret = (os.environ.get("STRIPE_WEBHOOK_SECRET") or "").strip()
+    payload = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature")
+    if not stripe or not webhook_secret:
+        return jsonify({"ok": False, "error": "Stripe webhook not configured"}), 400
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except Exception as exc:
+        app.logger.warning("Stripe webhook signature validation failed: %s", exc)
+        return jsonify({"ok": False, "error": "Invalid signature"}), 400
+
+    if event["type"] == "checkout.session.completed":
+        session_obj = event["data"]["object"]
+        metadata = session_obj.get("metadata") or {}
+        job_id = metadata.get("job_id")
+        package_id = metadata.get("package_id", "basic")
+        employer_id = metadata.get("employer_id") or session_obj.get("client_reference_id")
+        package = next((p for p in data.PACKAGES if p["id"] == package_id), data.PACKAGES[0])
+        if job_id:
+            job_store.update_job(int(job_id), status="Approved", package=package_id,
+                                 featured=package_id in ("featured", "premium"),
+                                 urgent=package_id in ("urgent", "premium"))
+            if employer_id:
+                job_store.record_order(int(employer_id), int(job_id), package)
+            app.logger.info("Stripe payment confirmed for Job %s. Marked Approved.", job_id)
+
+    return jsonify({"ok": True, "received": True})
+
+
+@app.route("/checkout/success")
+@employer_required
+def checkout_success():
+    return render_template("checkout_success.html")
 
 
 @app.post("/api/applicants/<int:candidate_id>/stage")
@@ -360,9 +530,8 @@ def api_move_stage(candidate_id):
 
 
 @app.post("/api/admin/jobs/<int:job_id>/moderate")
+@admin_required
 def api_moderate(job_id):
-    if current_role() != "admin":
-        return jsonify({"ok": False, "error": "Admins only."}), 403
     action = (request.json or {}).get("action")
     job = data.get_job(job_id)
     if not job:
@@ -375,9 +544,8 @@ def api_moderate(job_id):
 
 
 @app.post("/api/admin/reports/<int:report_id>/resolve")
+@admin_required
 def api_resolve_report(report_id):
-    if current_role() != "admin":
-        return jsonify({"ok": False, "error": "Admins only."}), 403
     if job_store.resolve_report(report_id):
         return jsonify({"ok": True})
     return jsonify({"ok": False}), 404

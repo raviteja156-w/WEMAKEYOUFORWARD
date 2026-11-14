@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy — NEXORA{% endblock %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto px-5 md:px-8 py-10 md:py-16">
+  <div class="mb-10 text-center md:text-left">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-soft text-indigo text-xs font-semibold uppercase tracking-wider mb-3">
+      Legal & Compliance
+    </div>
+    <h1 class="font-display text-3xl md:text-4xl font-bold text-cream">Privacy Policy</h1>
+    <p class="text-sm text-cream/60 mt-2">Last updated: 14 November 2026 · Compliant with the Privacy Act 1988 (Cth) and Australian Privacy Principles (APPs)</p>
+  </div>
+
+  <div class="card p-8 md:p-12 space-y-8 text-ink/80 text-sm leading-relaxed">
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">1. Commitment to Privacy</h2>
+      <p>NEXORA Pty Ltd (ACN 681 492 110) ("NEXORA", "we", "our", "us") is dedicated to safeguarding the personal information of our users, employers, and job seekers. We are bound by the <em>Privacy Act 1988 (Cth)</em> and the Australian Privacy Principles (APPs), which regulate how we collect, store, use, and disclose personal and sensitive information.</p>
+    </section>
+
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">2. Information We Collect</h2>
+      <p class="mb-2">We collect information strictly necessary to provide talent matching, application tracking, and employment marketplace services:</p>
+      <ul class="list-disc pl-5 space-y-1.5 text-ink/70">
+        <li><strong>Job Seekers:</strong> Full name, email address, contact telephone, geographical location, Australian work rights status, career headline, resumes/CVs (including parsed work history, education credentials, and technical competencies), and profile preferences.</li>
+        <li><strong>Employers:</strong> Organization name, registered entity name, Australian Business Number (ABN), company address, contact person details, billing records, and posted job descriptions.</li>
+        <li><strong>Technical Information:</strong> IP addresses, browser user-agent, session identifiers, and aggregated analytical telemetry to ensure security and prevent platform abuse.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">3. Purpose and Use of Information</h2>
+      <p class="mb-2">Your information is processed for the following operational purposes:</p>
+      <ul class="list-disc pl-5 space-y-1.5 text-ink/70">
+        <li>Facilitating job applications between candidates and hiring organizations.</li>
+        <li>Delivering AI-assisted resume ATS scoring and interview preparation roadmaps.</li>
+        <li>Verifying employer legitimacy and ABN registrations with the Australian Business Register (ABR).</li>
+        <li>Communicating critical service updates, application status transitions, and authentication notices.</li>
+        <li>Preventing fraudulent listings, unauthorized platform access, and security breaches.</li>
+      </ul>
+      <p class="mt-2 font-medium text-navy">We do not sell, rent, or trade your personal information to third-party data brokers or advertisers.</p>
+    </section>
+
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">4. Disclosure to Employers</h2>
+      <p>When a job seeker submits an application or enables their profile for employer discovery, authorized hiring representatives of the target company receive access to the submitted resume, cover note, and relevant profile attributes. Employers are bound by applicable employment privacy standards and must not use candidate details for purposes outside candidate evaluation.</p>
+    </section>
+
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">5. Data Security & Storage</h2>
+      <p>All data in transit is encrypted using Transport Layer Security (TLS 1.3). Data at rest is safeguarded using AES-256 encryption within enterprise-grade PostgreSQL/Supabase infrastructure. Authentication sessions are secured with cryptographically signed tokens and HTTP-only, secure cookies. While no internet transmission is 100% infallible, we employ multi-tier defense controls to prevent unauthorized access or disclosure.</p>
+    </section>
+
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">6. Access and Correction Rights (APP 12 & 13)</h2>
+      <p>Under the APPs, you have the right to request access to the personal data we hold about you and to request corrections if you believe it is inaccurate or incomplete. You may update your profile or delete your account at any time via your user portal or by contacting our Privacy Officer.</p>
+    </section>
+
+    <section>
+      <h2 class="font-display text-lg font-bold text-navy mb-3">7. Privacy Officer Contact</h2>
+      <p>For inquiries, access requests, or complaints regarding our privacy compliance, please direct correspondence to:</p>
+      <div class="mt-3 p-4 rounded-xl bg-grey-card border border-grey-line text-xs space-y-1 text-navy">
+        <p><strong>NEXORA Privacy Officer</strong></p>
+        <p>Email: <a href="mailto:privacy@nexora.com.au" class="text-indigo underline">privacy@nexora.com.au</a></p>
+        <p>Postal: Level 14, 100 Mount Street, North Sydney NSW 2060, Australia</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+{% endblock %}

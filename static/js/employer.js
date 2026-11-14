@@ -129,13 +129,28 @@
   if (!publishBtn) return;
   publishBtn.addEventListener('click', async () => {
     publishBtn.disabled = true;
-    publishBtn.textContent = 'Processing…';
+    publishBtn.textContent = 'Processing Payment…';
     const pkg = publishBtn.dataset.package;
     try {
-      await fetch('/api/checkout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ package: pkg }),
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ package: pkg }),
       });
-    } catch (e) {}
+      const data = await res.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+        return;
+      }
+      if (!data.ok) {
+        alert(data.error || 'Payment initialization failed. Please try again.');
+        publishBtn.disabled = false;
+        publishBtn.textContent = 'Publish Job';
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
     document.getElementById('checkout-form-state').classList.add('hidden');
     document.getElementById('checkout-success-state').classList.remove('hidden');
     if (window.lucide) lucide.createIcons();

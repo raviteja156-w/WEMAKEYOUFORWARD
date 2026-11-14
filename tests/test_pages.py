@@ -26,7 +26,9 @@ class NexoraPageSmokeTests(unittest.TestCase):
             "/seeker/login",
             "/seeker/register",
             "/seeker/forgot",
-            "/admin",
+            "/admin/login",
+            "/privacy",
+            "/terms",
         ]
         for url in pages:
             with self.subTest(url=url):
@@ -34,6 +36,11 @@ class NexoraPageSmokeTests(unittest.TestCase):
                 self.assertEqual(res.status_code, 200, f"Page {url} returned {res.status_code}")
 
     def test_unauthenticated_protected_routes_redirect(self):
+        # Admin protected route
+        res_admin = self.client.get("/admin", follow_redirects=False)
+        self.assertEqual(res_admin.status_code, 302)
+        self.assertIn("/admin/login", res_admin.headers.get("Location", ""))
+
         protected_employer = ["/dashboard/employer", "/post-job", "/checkout", "/applicants", "/employer/setup"]
         for url in protected_employer:
             with self.subTest(url=url):
@@ -78,6 +85,13 @@ class NexoraPageSmokeTests(unittest.TestCase):
             with self.subTest(url=url):
                 res = self.client.get(url)
                 self.assertEqual(res.status_code, 200, f"Employer page {url} returned {res.status_code}")
+
+    def test_authenticated_admin_page_returns_200(self):
+        with self.client.session_transaction() as sess:
+            sess.clear()
+            sess["is_admin"] = True
+        res = self.client.get("/admin")
+        self.assertEqual(res.status_code, 200)
 
     def test_404_page(self):
         res = self.client.get("/non-existent-random-page")
